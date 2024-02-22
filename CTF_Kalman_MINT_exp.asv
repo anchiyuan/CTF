@@ -5,9 +5,9 @@ close all;
 SorNum = 1;                                              % source number
 MicNum = 6;                                             % number of microphone
 c = 343;                                                 % Sound velocity (m/s)
-fs = 48000;                                              % Sample frequency (samples/s)
+fs = 16000;                                              % Sample frequency (samples/s)
 Ts = 1/fs;                                               % Sample period (s)
-points_rir = 8192;                                      % Number of rir points (需比 reverberation time 還長)
+points_rir = 4096;                                      % Number of rir points (需比 reverberation time 還長)
 
 %% window parameter %%
 NFFT = 1024;
