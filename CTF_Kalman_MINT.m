@@ -224,7 +224,7 @@ for FrameNo= 1:NumOfFrame
 end
 
 %% predict CTF with Kalman filter (A) %%
-start_ini_frame = ceil((12*fs - NFFT)/hopsize) + 1;    % wpe 第12秒開始穩定
+start_ini_frame = L;
 ini_frame = NumOfFrame;
 
 % Kalman filter %

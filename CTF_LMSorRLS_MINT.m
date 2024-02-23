@@ -224,7 +224,7 @@ for FrameNo= 1:NumOfFrame
 end
 
 %% predict CTF with LMS or RLS (A) %%
-start_ini_frame = ceil((12*fs - NFFT)/hopsize) + 1;    % wpe 第12秒開始穩定
+start_ini_frame = L;    % wpe 第12秒開始穩定
 ini_frame = NumOfFrame;
 
 % LMS %
