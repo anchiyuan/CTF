@@ -235,7 +235,7 @@ parfor i = 1:MicNum
         weight = zeros(L, 1);
         P = 0.5*eye(L);    % error covariance matrix %
         K = zeros(L, 1);    % Kalman gain %
-        R = 10^(-1);    % measurement noise covariance matrix %
+        R = 10^(-3);    % measurement noise covariance matrix %
         for FrameNo = start_ini_frame:ini_frame
             % no time update only have measurement update %
             K = P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).')*inv(conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).') + R);
