@@ -195,35 +195,6 @@ load(y_wpe_filename);
 % shg
 
 %% DAS beamformer %%
-% % 算 mic 與 source 之距離 %
-% distance = zeros(MicNum, SorNum);
-% for i = 1 : MicNum
-%     distance(i, :) =  sqrt(sum((SorPos - MicPos(i, :)).^2));
-% end
-% 
-% % 算 a %
-% a = zeros(MicNum, SorNum, frequency);
-% for n = 1:frequency
-%     omega = 2*pi*freqs_vector(n);
-%     a(:, :, n) = exp(-1j*omega/c*distance)./distance;
-% end
-% 
-% % 算 DAS weight %
-% w = a/MicNum;
-% 
-% % 算 Y_DAS %
-% y_wpe_transpose = y_wpe.';
-% [Y_wpe, ~, ~] = stft(y_wpe_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
-% 
-% Y_DAS = zeros(frequency, NumOfFrame);
-% for FrameNo= 1:NumOfFrame
-%     for n = 1: frequency
-%          Y_DAS(n, FrameNo) = w(:, :, n)'*squeeze(Y_wpe(n, FrameNo, :));
-%     end  
-% 
-% end
-
-%% MPDR beamformer %%
 % 算 mic 與 source 之距離 %
 distance = zeros(MicNum, SorNum);
 for i = 1 : MicNum
@@ -237,30 +208,13 @@ for n = 1:frequency
     a(:, :, n) = exp(-1j*omega/c*distance)./distance;
 end
 
-% 算 Ryy %
+% 算 DAS weight %
+w = a/MicNum;
+
+% 算 Y_DAS %
 y_wpe_transpose = y_wpe.';
 [Y_wpe, ~, ~] = stft(y_wpe_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
 
-
-Ryy = zeros(MicNum, MicNum, frequency);
-for FrameNo =1:NumOfFrame
-    Y_choose = squeeze(Y_wpe(:, FrameNo, :)).';
-    for n = 1:frequency
-         Ryy(:, :, n) = Ryy(:, :, n) + Y_choose(:, n) * Y_choose(:, n)';  
-    end
-
-end
-
-Ryy = Ryy / NumOfFrame;
-
-% 算 MPDR weight %
-dia_load_beamformer = 10^(-1);
-w = zeros(MicNum, SorNum, frequency);
-for n = 1:frequency
-    w(:, :, n) = inv(Ryy(:, :, n) + dia_load_beamformer*eye(MicNum))*a(:, :, n) / real(a(:, :, n)'*inv(Ryy(:, :, n) + dia_load_beamformer*eye(MicNum))*a(:, :, n));
-end
-
-% beamforming %
 Y_DAS = zeros(frequency, NumOfFrame);
 for FrameNo= 1:NumOfFrame
     for n = 1: frequency
