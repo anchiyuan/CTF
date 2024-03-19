@@ -148,7 +148,7 @@ for FrameNo= 1:NumOfFrame
 end
 
 %% SA %%
-start_ini_frame = ceil((12*fs - NFFT)/hopsize) + 1;    % wpe 第12秒開始穩定
+start_ini_frame = L;
 ini_frame = NumOfFrame;
 A = zeros(MicNum, L, frequency);
 
