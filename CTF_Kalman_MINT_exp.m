@@ -12,7 +12,7 @@ fs = 48000;
 MicNum = 6;           % 實驗麥克風數量
 SpeakerNum = 6;       % 實驗喇叭數量
 look_speaker = 3;     % source 為哪一個喇叭
-look_mic = 6;         % 指定想要畫圖之麥克風
+look_mic = 1;         % 指定想要畫圖之麥克風
 points_rir = 8192;    % 自行設定想要輸出的 RIR 長度
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -56,7 +56,7 @@ for i = 1:MicNum
     y_nodelay_str = ['wav_exp\', string(i-1), 'th.wav'];
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     y_nodelay_filename = join(y_nodelay_str, '');
-    [y_nodelay(i, :), fs] = audioread( y_nodelay_filename, [(look_speaker-1)*Second_speaker+1, (look_speaker-1)*Second_speaker+SorLen]);
+    [y_nodelay(i, :), fs] = audioread( y_nodelay_filename, [(look_speaker-1)*Second_speaker*fs+1, (look_speaker-1)*Second_speaker*fs+SorLen]);
 end
 
 % delay y_nodelay to get y_delay %
@@ -121,51 +121,51 @@ ini_frame = NumOfFrame;
 A = zeros(MicNum, L, frequency);
 
 % Kalman stationary filter %
-% tic
-% parfor i = 1:MicNum
-%     for n =1:frequency
-%         weight = zeros(L, 1);
-%         P = 0.5*eye(L);    % error covariance matrix %
-%         K = zeros(L, 1);    % Kalman gain %
-%         R = 10^(-3);    % measurement noise covariance matrix %
-%         for FrameNo = start_ini_frame:ini_frame
-%             % no time update only have measurement update %
-%             K = P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).')*inv(conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).') + R);
-%             weight = weight + K*(conj(Y_delay(n, FrameNo, i)) - conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*weight);
-%             P = P - K*conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P;
-%         end
-%     
-%         A(i, :, n) = weight';
-%     end
-% 
-% end
-% toc
-
-% Kalman nonstationary filter %
 tic
 parfor i = 1:MicNum
     for n =1:frequency
         weight = zeros(L, 1);
         P = 0.5*eye(L);    % error covariance matrix %
         K = zeros(L, 1);    % Kalman gain %
-        Q = 10^(-4)*eye(L);    % process noise covariance matrix %
         R = 10^(-3);    % measurement noise covariance matrix %
         for FrameNo = start_ini_frame:ini_frame
-            % time update %
-            P = P + Q;
-
-            % measurement update %
+            % no time update only have measurement update %
             K = P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).')*inv(conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).') + R);
             weight = weight + K*(conj(Y_delay(n, FrameNo, i)) - conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*weight);
             P = P - K*conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P;
-
         end
-
+    
         A(i, :, n) = weight';
     end
 
 end
 toc
+
+% Kalman nonstationary filter %
+% tic
+% parfor i = 1:MicNum
+%     for n =1:frequency
+%         weight = zeros(L, 1);
+%         P = 0.5*eye(L);    % error covariance matrix %
+%         K = zeros(L, 1);    % Kalman gain %
+%         Q = 10^(-4)*eye(L);    % process noise covariance matrix %
+%         R = 10^(-3);    % measurement noise covariance matrix %
+%         for FrameNo = start_ini_frame:ini_frame
+%             % time update %
+%             P = P + Q;
+% 
+%             % measurement update %
+%             K = P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).')*inv(conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).') + R);
+%             weight = weight + K*(conj(Y_delay(n, FrameNo, i)) - conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*weight);
+%             P = P - K*conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P;
+% 
+%         end
+% 
+%         A(i, :, n) = weight';
+%     end
+% 
+% end
+% toc
 
 %% TF estimate (tf and t60) %%
 TF =  tfestimate(source, y_nodelay.', hamming(points_rir), points_rir*0.75, points_rir);
@@ -207,7 +207,6 @@ for i = 1:MicNum
 end
 
 A_tdomain = A_tdomain.*ratio_A_tdomain;
-
 
 % 畫 A_tdomain time plot
 figure(2)
