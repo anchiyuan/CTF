@@ -56,7 +56,7 @@ for i = 1:MicNum
     y_nodelay_str = ['wav_exp\', string(i-1), 'th.wav'];
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     y_nodelay_filename = join(y_nodelay_str, '');
-    [y_nodelay(i, :), fs] = audioread( y_nodelay_filename, [(look_speaker-1)*Second_speaker*fs+1, (look_speaker-1)*Second_speaker*fs+SorLen]);
+    [y_nodelay(i, :), Fs] = audioread( y_nodelay_filename, [(look_speaker-1)*Second_speaker*fs+1, (look_speaker-1)*Second_speaker*fs+SorLen]);
 end
 
 % delay y_nodelay to get y_delay %
@@ -222,6 +222,27 @@ shg
 % 算 NRMSPM %
 h_NRMSPM = reshape(tf.', [MicNum*points_rir 1]);
 aa_NRMSPM = reshape(A_tdomain.', [MicNum*points_rir 1]);
-NRMSPM = 20*log(norm(h_NRMSPM-h_NRMSPM.'*aa_NRMSPM/(aa_NRMSPM.'*aa_NRMSPM)*aa_NRMSPM)/norm(h_NRMSPM));
+NRMSPM = 20*log10(norm(h_NRMSPM-h_NRMSPM.'*aa_NRMSPM/(aa_NRMSPM.'*aa_NRMSPM)*aa_NRMSPM)/norm(h_NRMSPM));
 
 fprintf('done\n')
+
+[~, argmax_h] = max(abs(tf.'));
+[~, argmax_A_tdomain] = max(abs(A_tdomain.'));
+
+NRMSPM_in = zeros(MicNum, 1);
+for i = 1:MicNum
+    NRMSPM_in(i, :) = 20*log10(norm(tf(i, :).'-tf(i, :)*A_tdomain(i, :).'/(A_tdomain(i, :)*A_tdomain(i, :).')*A_tdomain(i, :).')/norm(tf(i, :).'));
+end
+
+ATF = fft(tf, points_rir, 2);
+ATF_estimated = fft(A_tdomain, points_rir, 2);
+
+figure(3)
+semilogx(linspace(0, fs/2, points_rir/2+1), abs(ATF(look_mic, 1:points_rir/2+1)), 'r');
+hold on
+semilogx(linspace(0, fs/2, points_rir/2+1), abs(ATF_estimated(look_mic, 1:points_rir/2+1)), 'b');
+hold off
+legend('MTF', 'CTF')
+xlabel('frequency')
+ylabel('magnitude')
+shg

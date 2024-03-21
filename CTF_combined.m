@@ -149,7 +149,7 @@ A_tdomain = A_tdomain.*ratio_A_tdomain;
 %  算 NRMSPM %
 h_NRMSPM = reshape(h.', [MicNum*points_rir 1]);
 aa_NRMSPM = reshape(A_tdomain.', [MicNum*points_rir 1]);
-NRMSPM_Wiener = 20*log(norm(h_NRMSPM-h_NRMSPM.'*aa_NRMSPM/(aa_NRMSPM.'*aa_NRMSPM)*aa_NRMSPM)/norm(h_NRMSPM));
+NRMSPM_Wiener = 20*log10(norm(h_NRMSPM-h_NRMSPM.'*aa_NRMSPM/(aa_NRMSPM.'*aa_NRMSPM)*aa_NRMSPM)/norm(h_NRMSPM));
 
 % estimated RIR and absolute error plot %
 h_yaxis_upperlimit = max(h(look_mic, :)) + 0.01;
@@ -233,7 +233,7 @@ A_tdomain = A_tdomain.*ratio_A_tdomain;
 %  算 NRMSPM %
 h_NRMSPM = reshape(h.', [MicNum*points_rir 1]);
 aa_NRMSPM = reshape(A_tdomain.', [MicNum*points_rir 1]);
-NRMSPM_RLS = 20*log(norm(h_NRMSPM-h_NRMSPM.'*aa_NRMSPM/(aa_NRMSPM.'*aa_NRMSPM)*aa_NRMSPM)/norm(h_NRMSPM));
+NRMSPM_RLS = 20*log10(norm(h_NRMSPM-h_NRMSPM.'*aa_NRMSPM/(aa_NRMSPM.'*aa_NRMSPM)*aa_NRMSPM)/norm(h_NRMSPM));
 
 % estimated RIR and absolute error plot %
 h_yaxis_upperlimit = max(h(look_mic, :)) + 0.01;
@@ -318,7 +318,7 @@ A_tdomain = A_tdomain.*ratio_A_tdomain;
 %  算 NRMSPM %
 h_NRMSPM = reshape(h.', [MicNum*points_rir 1]);
 aa_NRMSPM = reshape(A_tdomain.', [MicNum*points_rir 1]);
-NRMSPM_Kalman = 20*log(norm(h_NRMSPM-h_NRMSPM.'*aa_NRMSPM/(aa_NRMSPM.'*aa_NRMSPM)*aa_NRMSPM)/norm(h_NRMSPM));
+NRMSPM_Kalman = 20*log10(norm(h_NRMSPM-h_NRMSPM.'*aa_NRMSPM/(aa_NRMSPM.'*aa_NRMSPM)*aa_NRMSPM)/norm(h_NRMSPM));
 
 % estimated RIR and absolute error plot %
 h_yaxis_upperlimit = max(h(look_mic, :)) + 0.01;
