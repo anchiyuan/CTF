@@ -89,7 +89,7 @@ load(y_wpe_filename);
 if look_speaker == 1
     distance = [1.1; 1.153; 1.203; 1.253; 1.303; 1.36];    % 第一顆喇叭
 else
-    distance = [0.832; 0.83; 0.834; 0.84; 0.852; 0.87];    % 第三顆喇叭
+    distance = [0.828; 0.83; 0.834; 0.84; 0.852; 0.87];    % 第三顆喇叭
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -224,8 +224,7 @@ h_NRMSPM = reshape(tf.', [MicNum*points_rir 1]);
 aa_NRMSPM = reshape(A_tdomain.', [MicNum*points_rir 1]);
 NRMSPM = 20*log10(norm(h_NRMSPM-h_NRMSPM.'*aa_NRMSPM/(aa_NRMSPM.'*aa_NRMSPM)*aa_NRMSPM)/norm(h_NRMSPM));
 
-fprintf('done\n')
-
+%% 檢查 direct sound 有無 match %%
 [~, argmax_h] = max(abs(tf.'));
 [~, argmax_A_tdomain] = max(abs(A_tdomain.'));
 
@@ -234,6 +233,7 @@ for i = 1:MicNum
     NRMSPM_in(i, :) = 20*log10(norm(tf(i, :).'-tf(i, :)*A_tdomain(i, :).'/(A_tdomain(i, :)*A_tdomain(i, :).')*A_tdomain(i, :).')/norm(tf(i, :).'));
 end
 
+%% 檢查 ATF 有無 match %%
 ATF = fft(tf, points_rir, 2);
 ATF_estimated = fft(A_tdomain, points_rir, 2);
 
@@ -246,3 +246,5 @@ legend('MTF', 'CTF')
 xlabel('frequency')
 ylabel('magnitude')
 shg
+
+fprintf('done\n')
