@@ -37,7 +37,7 @@ SorLen =  Second*fs;
 
 % load source %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-[source_transpose, Fs] = audioread('wav_exp\loudspeaker_1.wav', [1, SorLen]);    % speech source
+[source_transpose, Fs] = audioread('wav_exp\first\loudspeaker_1.wav', [1, SorLen]);    % speech source
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 source = source_transpose.';
 
@@ -53,7 +53,7 @@ NumOfFrame_vector = 1:1:NumOfFrame;
 y_nodelay = zeros(MicNum, SorLen);
 for i = 1:MicNum
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    y_nodelay_str = ['wav_exp\', string(i-1), 'th.wav'];
+    y_nodelay_str = ['wav_exp\first\', string(i-1), 'th.wav'];
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     y_nodelay_filename = join(y_nodelay_str, '');
     [y_nodelay(i, :), Fs] = audioread( y_nodelay_filename, [(look_speaker-1)*Second_speaker*fs+1, (look_speaker-1)*Second_speaker*fs+SorLen]);
@@ -79,7 +79,7 @@ y_delay_transpose = y_delay.';
 % save(y_wpe_filename, 'y_wpe')
 
 % load y_wpe %
-y_wpe_str = ['y_exp\y_wpe_', string(look_speaker), '.mat'];
+y_wpe_str = ['y_exp\first\y_wpe_', string(look_speaker), '.mat'];
 y_wpe_filename = join(y_wpe_str, '');
 load(y_wpe_filename);
 
