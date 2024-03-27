@@ -14,7 +14,7 @@
 
 fs    = 16000;     %% Sampling frequency
 
-num_mic = 30;       %% Number of channels
+num_mic = 6;       %% Number of channels
 
 num_out = num_mic; %% Number of outputs (should be <= microphones).
 		   %% set to 1 if output a single channel 

@@ -7,13 +7,12 @@ addpath('wpe_v1.33')
 %% RIR parameter %%
 SorNum = 1;
 c = 343;
-fs = 48000;
+Fs = 48000;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+fs = 16000;           % 欲 resample 成的取樣頻率
 MicNum = 6;           % 實驗麥克風數量
-SpeakerNum = 6;       % 實驗喇叭數量
-look_speaker = 3;     % source 為哪一個喇叭
 look_mic = 1;         % 指定想要畫圖之麥克風
-points_rir = 8192;    % 自行設定想要輸出的 RIR 長度
+points_rir = 2048;    % 自行設定想要輸出的 RIR 長度
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% window parameter %%
@@ -30,16 +29,19 @@ freqs_vector = linspace(0, fs/2, frequency);
 
 %% read source 音檔 (source) %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Second_speaker = 15;    % 每顆喇叭播放時間 (10+5)
-Second = 8;             % 使用時間長度
+Second = 28;             % 使用時間長度
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-SorLen =  Second*fs;
+SorLen =  Second*Fs;
+sorLen =  Second*fs;
 
 % load source %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-[source_transpose, Fs] = audioread('wav_exp\first\loudspeaker_1.wav', [1, SorLen]);    % speech source
+[source_transpose, ~] = audioread('wav_exp\white_noise_30s.wav', [1, SorLen]);    % speech source
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 source = source_transpose.';
+
+% resample %
+source = resample(source, 1, Fs/fs);
 
 %% source 做 stft (S) %%
 source_transpose = source.';
@@ -49,48 +51,47 @@ NumOfFrame = size(S, 2);
 NumOfFrame_vector = 1:1:NumOfFrame;
 
 %% read mic 音檔再做 stft (y_nodelay, y_delay and Y_delay) %%
-% load y_nodelay %
-y_nodelay = zeros(MicNum, SorLen);
-for i = 1:MicNum
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    y_nodelay_str = ['wav_exp\first\', string(i-1), 'th.wav'];
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    y_nodelay_filename = join(y_nodelay_str, '');
-    [y_nodelay(i, :), Fs] = audioread( y_nodelay_filename, [(look_speaker-1)*Second_speaker*fs+1, (look_speaker-1)*Second_speaker*fs+SorLen]);
-end
+
+
+% resample %
+y_nodelay = resample(y_nodelay, 1, Fs/fs, Dimension=2);
 
 % delay y_nodelay to get y_delay %
 extra_delay_y = (ceil(NFFT/hopsize) - 1)*hopsize;    % put delay for equilization between time convolution and CTF 
-y_delay = zeros(MicNum, SorLen);
-y_delay(:, extra_delay_y+1:end) = y_nodelay(:, 1:SorLen-extra_delay_y);
+y_delay = zeros(MicNum, sorLen);
+y_delay(:, extra_delay_y+1:end) = y_nodelay(:, 1:sorLen-extra_delay_y);
 
 % y_delay 轉頻域 to get Y_delay %
 y_delay_transpose = y_delay.';
 [Y_delay, ~, ~] = stft(y_delay_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
 
 %% WPE (y_wpe) %%
-% % do wpe %
+% % do wpe %% load y_nodelay %
+y_nodelay = zeros(MicNum, SorLen);
+for i = 1:MicNum
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    y_nodelay_str = ['wav_exp\', string(i), '.wav'];
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    y_nodelay_filename = join(y_nodelay_str, '');
+    [y_nodelay(i, :), ~] = audioread( y_nodelay_filename, [1, SorLen]);
+end
 % y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
 % y_wpe = y_wpe.';
 % 
 % % 存 wpe mat %
-% y_wpe_str = ['y_exp\y_wpe_', string(look_speaker), '.mat'];
+% y_wpe_str = ['y_exp\y_wpe', string(fs),'.mat'];
 % y_wpe_filename = join(y_wpe_str, '');
 % save(y_wpe_filename, 'y_wpe')
 
 % load y_wpe %
-y_wpe_str = ['y_exp\first\y_wpe_', string(look_speaker), '.mat'];
+y_wpe_str = ['y_exp\y_wpe', string(fs),'.mat'];
 y_wpe_filename = join(y_wpe_str, '');
 load(y_wpe_filename);
 
 %% DAS beamformer (Y_DAS) %%
 % mic 與 source 之距離 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-if look_speaker == 1
-    distance = [1.1; 1.153; 1.203; 1.253; 1.303; 1.36];    % 第一顆喇叭
-else
-    distance = [0.828; 0.83; 0.834; 0.84; 0.852; 0.87];    % 第三顆喇叭
-end
+distance = [0.83; 0.832; 0.832; 0.84; 0.852; 0.874];    % 第三顆喇叭
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % 算 a %
@@ -193,7 +194,7 @@ xlabel('points')
 ylabel('amplitude')
 shg
 
-%% A 轉回時域且算 NRMSPM (A_tdomain NRMSPM) %%
+%% A 轉回時域畫圖 (A_tdomain) %%
 A_forplot = zeros(frequency, L, MicNum);
 for i = 1 : MicNum
     A_forplot(:, :, i) = squeeze(A(i, :, :)).';
@@ -208,6 +209,7 @@ end
 
 A_tdomain = A_tdomain.*ratio_A_tdomain;
 
+look_mic = 1;
 % 畫 A_tdomain time plot
 figure(2)
 plot(tf(look_mic, :), 'r');
@@ -219,19 +221,19 @@ xlabel('points')
 ylabel('amplitude')
 shg
 
-% 算 NRMSPM %
-h_NRMSPM = reshape(tf.', [MicNum*points_rir 1]);
-aa_NRMSPM = reshape(A_tdomain.', [MicNum*points_rir 1]);
-NRMSPM = 20*log10(norm(h_NRMSPM-h_NRMSPM.'*aa_NRMSPM/(aa_NRMSPM.'*aa_NRMSPM)*aa_NRMSPM)/norm(h_NRMSPM));
-
-%% 檢查 direct sound 有無 match %%
-[~, argmax_h] = max(abs(tf.'));
-[~, argmax_A_tdomain] = max(abs(A_tdomain.'));
+%% 算 NRMSPM %%
+tf_NRMSPM = reshape(tf.', [MicNum*points_rir 1]);
+A_tdomain_NRMSPM = reshape(A_tdomain.', [MicNum*points_rir 1]);
+NRMSPM = 20*log10(norm(tf_NRMSPM-tf_NRMSPM.'*A_tdomain_NRMSPM/(A_tdomain_NRMSPM.'*A_tdomain_NRMSPM)*A_tdomain_NRMSPM)/norm(tf_NRMSPM));
 
 NRMSPM_in = zeros(MicNum, 1);
 for i = 1:MicNum
     NRMSPM_in(i, :) = 20*log10(norm(tf(i, :).'-tf(i, :)*A_tdomain(i, :).'/(A_tdomain(i, :)*A_tdomain(i, :).')*A_tdomain(i, :).')/norm(tf(i, :).'));
 end
+
+%% 檢查 direct sound 有無 match %%
+[~, argmax_tf] = max(abs(tf.'));
+[~, argmax_A_tdomain] = max(abs(A_tdomain.'));
 
 %% 檢查 ATF 有無 match %%
 ATF = fft(tf, points_rir, 2);
