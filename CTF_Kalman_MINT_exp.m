@@ -74,14 +74,14 @@ y_delay_transpose = y_delay.';
 [Y_delay, ~, ~] = stft(y_delay_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
 
 %% WPE (y_wpe) %%
-% do wpe %
-y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
-y_wpe = y_wpe.';
-
-% 存 wpe mat %
-y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
-y_wpe_filename = join(y_wpe_str, '');
-save(y_wpe_filename, 'y_wpe')
+% % do wpe %
+% y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
+% y_wpe = y_wpe.';
+% 
+% % 存 wpe mat %
+% y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
+% y_wpe_filename = join(y_wpe_str, '');
+% save(y_wpe_filename, 'y_wpe')
 
 % load y_wpe %
 y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
@@ -216,7 +216,8 @@ plot(tf(look_mic, :), 'r');
 hold on
 plot(-A_tdomain(look_mic, :), 'b');
 hold off
-legend('MTF', 'CTF')
+legend('tfestimate', 'CTF')
+title('RIR')
 xlabel('points')
 ylabel('amplitude')
 shg
@@ -244,7 +245,8 @@ semilogx(linspace(0, fs/2, points_rir/2+1), abs(ATF(look_mic, 1:points_rir/2+1))
 hold on
 semilogx(linspace(0, fs/2, points_rir/2+1), abs(ATF_estimated(look_mic, 1:points_rir/2+1)), 'b');
 hold off
-legend('MTF', 'CTF')
+legend('tfestimate', 'CTF')
+title('ATF')
 xlabel('frequency')
 ylabel('magnitude')
 shg

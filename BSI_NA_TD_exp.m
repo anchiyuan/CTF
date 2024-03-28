@@ -47,6 +47,13 @@ TF = TF.';
 TF = [TF flip(conj(TF(:, 2:end-1)))];
 tf = ifft(TF, points_rir, 2,'symmetric');
 
+figure(1)
+plot(tf(look_mic, :));
+title('tfestimate')
+xlabel('points')
+ylabel('amplitude')
+shg
+
 %% MCN %%
 % basic parameters %
 L = points_rir;
@@ -123,18 +130,19 @@ end
 aa = reshape(h_hat, [size(h_hat, 1)/MicNum MicNum]).';
 ratio_aa = zeros(MicNum, 1);
 for i = 1:MicNum
-    ratio_aa(i, :) = max(abs(h(i, :)))/max(abs(aa(i, :)));
+    ratio_aa(i, :) = max(abs(tf(i, :)))/max(abs(aa(i, :)));
 end
 
 aa = aa.*ratio_aa;
 
-figure(1)
+figure(2)
 plot(tf(look_mic, :), 'r');
 hold on
 plot(-aa(look_mic, :), 'b');
 hold off
 xlim([1 points_rir])
-legend('ground-truth RIR', 'estimated RIR')
+legend('tfestimate', 'BSI')
+title('RIR')
 xlabel('time samples')
 ylabel('amplitude')
 shg
@@ -149,25 +157,26 @@ NRMSPM_mid = 20*log10(norm(tf_NRMSPM-tf_NRMSPM.'*aa_NRMSPM/(aa_NRMSPM.'*aa_NRMSP
 h_hat = reshape(h_hat, [size(h_hat, 1)/MicNum MicNum]).';
 ratio_h_hat = zeros(MicNum, 1);
 for i = 1:MicNum
-    ratio_h_hat(i, :) = max(abs(h(i, :)))/max(abs(h_hat(i, :)));
+    ratio_h_hat(i, :) = max(abs(tf(i, :)))/max(abs(h_hat(i, :)));
 end
 
 h_hat = h_hat.*ratio_h_hat;
 
 % cost function 圖 %
-figure(2)
+figure(3)
 plot(cost_fun(L+1:end, :).');
 xlabel('update times')
 title('cost function')
 
 % RIR 比較圖 %
-figure(3)
+figure(4)
 plot(tf(look_mic, :), 'r');
 hold on
 plot(-h_hat(look_mic, :), 'b');
 hold off
 xlim([1 points_rir])
-legend('ground-truth RIR', 'estimated RIR')
+legend('tfestimate', 'BSI')
+title('RIR')
 xlabel('time samples')
 ylabel('amplitude')
 shg
@@ -190,12 +199,13 @@ end
 ATF = fft(tf, points_rir, 2);
 ATF_estimated = fft(h_hat, points_rir, 2);
 
-figure(4)
+figure(5)
 semilogx(linspace(0, fs/2, points_rir/2+1), abs(ATF(look_mic, 1:points_rir/2+1)), 'r');
 hold on
 semilogx(linspace(0, fs/2, points_rir/2+1), abs(ATF_estimated(look_mic, 1:points_rir/2+1)), 'b');
 hold off
-legend('MTF', 'CTF')
+legend('tfestimate', 'BSI')
+title('ATF')
 xlabel('frequency')
 ylabel('magnitude')
 shg
