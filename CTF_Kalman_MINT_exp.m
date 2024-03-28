@@ -51,7 +51,15 @@ NumOfFrame = size(S, 2);
 NumOfFrame_vector = 1:1:NumOfFrame;
 
 %% read mic 音檔再做 stft (y_nodelay, y_delay and Y_delay) %%
-
+% load y_nodelay %
+y_nodelay = zeros(MicNum, SorLen);
+for i = 1:MicNum
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    y_nodelay_str = ['wav_exp\', string(i), '.wav'];
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    y_nodelay_filename = join(y_nodelay_str, '');
+    [y_nodelay(i, :), ~] = audioread( y_nodelay_filename, [1, SorLen]);
+end
 
 % resample %
 y_nodelay = resample(y_nodelay, 1, Fs/fs, Dimension=2);
@@ -66,25 +74,17 @@ y_delay_transpose = y_delay.';
 [Y_delay, ~, ~] = stft(y_delay_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
 
 %% WPE (y_wpe) %%
-% % do wpe %% load y_nodelay %
-y_nodelay = zeros(MicNum, SorLen);
-for i = 1:MicNum
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    y_nodelay_str = ['wav_exp\', string(i), '.wav'];
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    y_nodelay_filename = join(y_nodelay_str, '');
-    [y_nodelay(i, :), ~] = audioread( y_nodelay_filename, [1, SorLen]);
-end
-% y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
-% y_wpe = y_wpe.';
-% 
-% % 存 wpe mat %
-% y_wpe_str = ['y_exp\y_wpe', string(fs),'.mat'];
-% y_wpe_filename = join(y_wpe_str, '');
-% save(y_wpe_filename, 'y_wpe')
+% do wpe %
+y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
+y_wpe = y_wpe.';
+
+% 存 wpe mat %
+y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
+y_wpe_filename = join(y_wpe_str, '');
+save(y_wpe_filename, 'y_wpe')
 
 % load y_wpe %
-y_wpe_str = ['y_exp\y_wpe', string(fs),'.mat'];
+y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
 y_wpe_filename = join(y_wpe_str, '');
 load(y_wpe_filename);
 
