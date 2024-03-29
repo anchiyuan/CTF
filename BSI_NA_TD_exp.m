@@ -164,7 +164,7 @@ h_hat = h_hat.*ratio_h_hat;
 
 % cost function 圖 %
 figure(3)
-plot(cost_fun(L+1:end, :).');
+plot(cost_fun(L+1:n, :).');
 xlabel('update times')
 title('cost function')
 
