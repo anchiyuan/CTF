@@ -48,13 +48,13 @@ title('空間圖')
 shg
 
 %% generate ground-truth RIR (h) %%
-% 產生 RIR 和存.mat 檔 %
-h = zeros(MicNum, SorNum, points_rir);
-h(:, 1, :) = rir_generator(c, fs, MicPos, SorPos(1, :), room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
-h(:, 2, :) = rir_generator(c, fs, MicPos, SorPos(2, :), room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
-rir_filename_str = ['h_TIKR\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(SorNum), 'x', string(points_rir), '.mat'];
-rir_filemane = join(rir_filename_str, '');
-save(rir_filemane, 'h')
+% % 產生 RIR 和存.mat 檔 %
+% h = zeros(MicNum, SorNum, points_rir);
+% h(:, 1, :) = rir_generator(c, fs, MicPos, SorPos(1, :), room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
+% h(:, 2, :) = rir_generator(c, fs, MicPos, SorPos(2, :), room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
+% rir_filename_str = ['h_TIKR\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(SorNum), 'x', string(points_rir), '.mat'];
+% rir_filemane = join(rir_filename_str, '');
+% save(rir_filemane, 'h')
 
 % load RIR 的 .mat 檔 %
 rir_filename_str = ['h_TIKR\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(SorNum), 'x', string(points_rir), '.mat'];
@@ -138,21 +138,21 @@ y_noisy = hs_noisy(:, 1:SorLen);
 
 
 %% WPE %%
-% do wpe %
-y_source_wpe = wpe(y_source_nodelay.', 'wpe_parameter.m');
-y_source_wpe = y_source_wpe.';
-
-y_interferer_wpe = wpe(y_interferer_nodelay.', 'wpe_parameter.m');
-y_interferer_wpe = y_interferer_wpe.';
-
-% 存 wpe mat %
-y_wpe_filename_str = ['y_TIKR\y_source_wpe-', string(reverberation_time), '.mat'];
-y_wpe_filename = join(y_wpe_filename_str, '');
-save(y_wpe_filename, 'y_source_wpe')
-
-y_wpe_filename_str = ['y_TIKR\y_interferer_wpe-', string(reverberation_time), '.mat'];
-y_wpe_filename = join(y_wpe_filename_str, '');
-save(y_wpe_filename, 'y_interferer_wpe')
+% % do wpe %
+% y_source_wpe = wpe(y_source_nodelay.', 'wpe_parameter.m');
+% y_source_wpe = y_source_wpe.';
+% 
+% y_interferer_wpe = wpe(y_interferer_nodelay.', 'wpe_parameter.m');
+% y_interferer_wpe = y_interferer_wpe.';
+% 
+% % 存 wpe mat %
+% y_wpe_filename_str = ['y_TIKR\y_source_wpe-', string(reverberation_time), '.mat'];
+% y_wpe_filename = join(y_wpe_filename_str, '');
+% save(y_wpe_filename, 'y_source_wpe')
+% 
+% y_wpe_filename_str = ['y_TIKR\y_interferer_wpe-', string(reverberation_time), '.mat'];
+% y_wpe_filename = join(y_wpe_filename_str, '');
+% save(y_wpe_filename, 'y_interferer_wpe')
 
 % load y_wpe %
 y_wpe_filename_str = ['y_TIKR\y_source_wpe-', string(reverberation_time), '.mat'];
@@ -312,3 +312,23 @@ end
 source_TIKR_transpose = istft(S_TIKR, fs, Window=hamming(points_rir), OverlapLength=points_rir-points_rir/4, FFTLength=points_rir, ConjugateSymmetric=true, FrequencyRange='onesided');
 source_TIKR = source_TIKR_transpose.';
 
+%% save .wav 檔 %%
+point_start_save = 18*fs;
+
+audiowrite('wav_TIKR\source_ground-truth.wav', source(1, point_start_save:end), fs)
+audiowrite('wav_TIKR\interferer_ground-truth.wav', source(2, point_start_save:end), fs)
+
+ratio_y_noisy = 0.8 / max(abs(y_noisy(look_mic, point_start_save:end))) ;
+y_filemane_str = ['wav_TIKR\y_noisy_', string(reverberation_time), '.wav'];
+y_filemane = join(y_filemane_str, '');
+audiowrite(y_filemane, y_noisy(look_mic, point_start_save:end)*ratio_y_noisy, fs)
+
+source_TIKR_filemane_str = ['wav_TIKR\source_TIKR_', string(reverberation_time), '.wav'];
+source_TIKR_filemane = join(source_TIKR_filemane_str, '');
+audiowrite(source_TIKR_filemane, source_TIKR(1, point_start_save:end), fs)
+
+source_interferer_filemane_str = ['wav_TIKR\interferer_TIKR_', string(reverberation_time), '.wav'];
+source_interferer_filemane = join(source_interferer_filemane_str, '');
+audiowrite(source_interferer_filemane, source_TIKR(2, point_start_save:end), fs)
+
+fprintf('done\n')
