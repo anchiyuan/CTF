@@ -19,7 +19,7 @@ for i = 1:MicNum
     MicPos(i, :) = [MicStart(1, 1)+(i-1)*spacing MicStart(1, 2) MicStart(1, 3)];
 end
 
-SorPos = [3.5, 2.6, 1 ; 0.5, 4, 1];                        % source position (m)
+SorPos = [3.5, 2.6, 1 ; 0.5, 4, 1];                      % source position (m)
 room_dim = [5, 6, 2.5];                                  % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 reverberation_time = 0.4;                                % Reverberation time (s)
@@ -48,13 +48,13 @@ title('空間圖')
 shg
 
 %% generate ground-truth RIR (h) %%
-% 產生 RIR 和存.mat 檔 %
-h = zeros(MicNum, SorNum, points_rir);
-h(:, 1, :) = rir_generator(c, fs, MicPos, SorPos(1, :), room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
-h(:, 2, :) = rir_generator(c, fs, MicPos, SorPos(2, :), room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
-rir_filename_str = ['h_TIKR\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(SorNum), 'x', string(points_rir), '.mat'];
-rir_filemane = join(rir_filename_str, '');
-save(rir_filemane, 'h')
+% % 產生 RIR 和存.mat 檔 %
+% h = zeros(MicNum, SorNum, points_rir);
+% h(:, 1, :) = rir_generator(c, fs, MicPos, SorPos(1, :), room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
+% h(:, 2, :) = rir_generator(c, fs, MicPos, SorPos(2, :), room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
+% rir_filename_str = ['h_TIKR\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(SorNum), 'x', string(points_rir), '.mat'];
+% rir_filemane = join(rir_filename_str, '');
+% save(rir_filemane, 'h')
 
 % load RIR 的 .mat 檔 %
 rir_filename_str = ['h_TIKR\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(SorNum), 'x', string(points_rir), '.mat'];
@@ -138,21 +138,21 @@ y_noisy = hs_noisy(:, 1:SorLen);
 
 
 %% WPE %%
-% do wpe %
-y_source_wpe = wpe(y_source_nodelay.', 'wpe_parameter.m');
-y_source_wpe = y_source_wpe.';
-
-y_interferer_wpe = wpe(y_interferer_nodelay.', 'wpe_parameter.m');
-y_interferer_wpe = y_interferer_wpe.';
-
-% 存 wpe mat %
-y_wpe_filename_str = ['y_TIKR\y_source_wpe-', string(reverberation_time), '.mat'];
-y_wpe_filename = join(y_wpe_filename_str, '');
-save(y_wpe_filename, 'y_source_wpe')
-
-y_wpe_filename_str = ['y_TIKR\y_interferer_wpe-', string(reverberation_time), '.mat'];
-y_wpe_filename = join(y_wpe_filename_str, '');
-save(y_wpe_filename, 'y_interferer_wpe')
+% % do wpe %
+% y_source_wpe = wpe(y_source_nodelay.', 'wpe_parameter.m');
+% y_source_wpe = y_source_wpe.';
+% 
+% y_interferer_wpe = wpe(y_interferer_nodelay.', 'wpe_parameter.m');
+% y_interferer_wpe = y_interferer_wpe.';
+% 
+% % 存 wpe mat %
+% y_wpe_filename_str = ['y_TIKR\y_source_wpe-', string(reverberation_time), '.mat'];
+% y_wpe_filename = join(y_wpe_filename_str, '');
+% save(y_wpe_filename, 'y_source_wpe')
+% 
+% y_wpe_filename_str = ['y_TIKR\y_interferer_wpe-', string(reverberation_time), '.mat'];
+% y_wpe_filename = join(y_wpe_filename_str, '');
+% save(y_wpe_filename, 'y_interferer_wpe')
 
 % load y_wpe %
 y_wpe_filename_str = ['y_TIKR\y_source_wpe-', string(reverberation_time), '.mat'];
@@ -287,28 +287,78 @@ h_NRMSPM = reshape(squeeze(h(:, 2, :)).', [MicNum*points_rir 1]);
 aa_NRMSPM = reshape(A_interferer_tdomain.', [MicNum*points_rir 1]);
 NRMSPM_interferer = 20*log10(norm(h_NRMSPM-h_NRMSPM.'*aa_NRMSPM/(aa_NRMSPM.'*aa_NRMSPM)*aa_NRMSPM)/norm(h_NRMSPM));
 
-%%  source seperation with TIKR (source_TIKR) %%
-% A_tdomain 轉頻域 %
-frequency_ATF = points_rir/2 + 1;
-ATF = zeros(MicNum, SorNum, frequency_ATF);
-ATF_temp = fft(A_source_tdomain, points_rir, 2);
-ATF(:, 1, :) = ATF_temp(:, 1:frequency_ATF);
-ATF_temp = fft(A_interferer_tdomain, points_rir, 2);
-ATF(:, 2, :) = ATF_temp(:, 1:frequency_ATF);
+%%  source enhancement with MPDR (source_MPDR) %%
+MPDR_mode = 'ATF';    % 'ATF' 'RTF' 'freefield_ATF'
+if strcmp(MPDR_mode, 'ATF')
+    % generate estimated ATF %
+    frequency_ATF = points_rir/2 + 1;
+    ATF = fft(A_source_tdomain, points_rir, 2);
+    ATF = ATF(:, 1:frequency_ATF);
+
+elseif strcmp(MPDR_mode, 'RTF')
+    % generate estimated RTF %
+    frequency_ATF = points_rir/2 + 1;
+    ATF = fft(A_source_tdomain, points_rir, 2);
+    ATF = ATF(:, 1:frequency_ATF);
+    ATF = ATF./ATF(1, :);
+
+elseif strcmp(MPDR_mode, 'freefield_ATF')
+    % generate freefield ATF %
+    ATF = zeros(MicNum, frequency_ATF);
+    frequency_ATF_vector = linspace(0, fs/2, frequency_ATF);
+    for n = 1:frequency_ATF
+        omega = 2*pi*frequency_ATF_vector(n);
+        ATF(:, n) = exp(-1j*omega/c*distance(:, 1))./distance(:, 1);
+    end
+
+end
 
 % noisy 麥克風訊號轉 stft %
 [Y_noisy, ~, ~] = stft(y_noisy.', fs, Window=hamming(points_rir), OverlapLength=points_rir-points_rir/4, FFTLength=points_rir, FrequencyRange='onesided');
 NumOfFrame_ATF =  size(Y_noisy, 2);
 
-% do TIKR %
-beta = 1e-5;
-S_TIKR = zeros(frequency_ATF, NumOfFrame_ATF, SorNum);
+% compute Ryy %
+Ryy = zeros(MicNum, MicNum, frequency_ATF);
 for n = 1:frequency_ATF
     for FrameNo = 1:NumOfFrame_ATF
-        S_TIKR(n, FrameNo, :) = inv(ATF(:, :, n)'*ATF(:, :, n) + beta*eye(SorNum))*ATF(:, :, n)'*squeeze(Y_noisy(n, FrameNo, :));
+        Ryy(:, :, n) = Ryy(:, :, n) + squeeze(Y_noisy(n, FrameNo, :))*squeeze(Y_noisy(n, FrameNo, :))';
     end
+    
 end
 
-source_TIKR_transpose = istft(S_TIKR, fs, Window=hamming(points_rir), OverlapLength=points_rir-points_rir/4, FFTLength=points_rir, ConjugateSymmetric=true, FrequencyRange='onesided');
-source_TIKR = source_TIKR_transpose.';
+Ryy = Ryy/NumOfFrame_ATF;
 
+% compute MPDR weight %
+dia_load_beamformer = 10^(-2);
+w_MPDR = zeros(MicNum, frequency);
+for n = 1:frequency_ATF
+    w_MPDR(:, n) = inv(Ryy(:, :, n)+dia_load_beamformer*eye(MicNum))*ATF(:, n)/(ATF(:, n)'*inv(Ryy(:, :, n)+dia_load_beamformer*eye(MicNum))*ATF(:, n));
+end
+
+% do MPDR %
+S_MPDR = zeros(frequency_ATF, NumOfFrame_ATF);
+for n = 1:frequency_ATF
+    for FrameNo = 1:NumOfFrame_ATF
+        S_MPDR(n, FrameNo) = w_MPDR(:, n)'*squeeze(Y_noisy(n, FrameNo, :));
+    end
+    
+end
+
+% ifft get source_MPDR %
+source_MPDR_transpose = istft(S_MPDR, fs, Window=hamming(points_rir), OverlapLength=points_rir-points_rir/4, FFTLength=points_rir, ConjugateSymmetric=true, FrequencyRange='onesided');
+source_MPDR = source_MPDR_transpose.';
+
+% save .wav 檔 %
+point_start_save = 18*fs;
+
+audiowrite('wav_TIKR\source_ground-truth.wav', source(1, point_start_save:end), fs)
+audiowrite('wav_TIKR\interferer_ground-truth.wav', source(2, point_start_save:end), fs)
+
+ratio_y_noisy = 0.8 / max(abs(y_noisy(look_mic, point_start_save:end))) ;
+y_filemane_str = ['wav_TIKR\y_noisy_', string(reverberation_time), '.wav'];
+y_filemane = join(y_filemane_str, '');
+audiowrite(y_filemane, y_noisy(look_mic, point_start_save:end)*ratio_y_noisy, fs)
+
+source_MPDR_filemane_str = ['wav_TIKR\source_MPDR_', string(MPDR_mode), '_', string(reverberation_time), '.wav'];
+source_MPDR_filemane = join(source_MPDR_filemane_str, '');
+audiowrite(source_MPDR_filemane, source_MPDR(1, point_start_save:end)*20, fs)

@@ -19,7 +19,7 @@ for i = 1:MicNum
     MicPos(i, :) = [MicStart(1, 1)+(i-1)*spacing MicStart(1, 2) MicStart(1, 3)];
 end
 
-SorPos = [3.5, 2.6, 1 ; 0.5, 4, 1];                        % source position (m)
+SorPos = [3.5, 2.6, 1 ; 0.5, 4, 1];                      % source position (m)
 room_dim = [5, 6, 2.5];                                  % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 reverberation_time = 0.4;                                % Reverberation time (s)
