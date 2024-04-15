@@ -62,8 +62,9 @@ end
 Ryy = Ryy/NumOfFrame;
 
 %% check angle function is convex or not %%
-angle = 0:1:90;
+angle = -90:1:90;
 output_abs = zeros(size(angle, 2), 1);
+angle_cali = 1 - angle(:, 1);
 dia_load_beamformer = 10^(-2);
 
 for ang = angle
@@ -73,7 +74,7 @@ for ang = angle
         steer_vec = exp(1j*omega/c*kappa*MicPos.').';
         w_MPDR = inv(Ryy(:, :, n)+dia_load_beamformer*eye(MicNum))*steer_vec/(steer_vec'*inv(Ryy(:, :, n)+dia_load_beamformer*eye(MicNum))*steer_vec);
         for FrameNo = 1:NumOfFrame
-            output_abs(ang+1, :) = output_abs(ang+1, :) + abs(w_MPDR'*squeeze(Y(n, FrameNo, :)));
+            output_abs(ang+angle_cali, :) = output_abs(ang+angle_cali, :) + abs(w_MPDR'*squeeze(Y(n, FrameNo, :)));
         end
 
     end
@@ -87,9 +88,17 @@ xlabel('angle')
 ylabel('output power')
 shg
 
-%% angle freefield plane wave localization %%
+%% GSS for anglewise freefield plane wave localization %%
+[~, max_integer_angle] = max(output_abs);
+gss_left = (max_integer_angle - 1) - angle_cali;
+gss_right = (max_integer_angle + 1) - angle_cali;
+
+%% check distance function is convex or not %%
 
 
 
-%% distance freefield spherical wave localization %%
+%% GSS for distancewise freefield spherical wave localization %%
+
+
+
 
