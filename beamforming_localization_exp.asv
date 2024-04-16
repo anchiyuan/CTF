@@ -63,34 +63,88 @@ Ryy = Ryy/NumOfFrame;
 
 %% check angle function is convex or not %%
 angle = -90:1:90;
-output_abs = zeros(size(angle, 2), 1);
+output_abs_angle = zeros(size(angle, 2), 1);
 dia_load_beamformer = 10^(-2);
+angle_count = 0;
 
 for ang = angle
+    angle_count = angle_count + 1;
     kappa = [sind(ang), cosd(ang), 0];
     for n = 1:frequency
         omega = 2*pi*freqs_vector(n);
         steer_vec = exp(1j*omega/c*kappa*MicPos.').';
-        w_MPDR = inv(Ryy(:, :, n)+dia_load_beamformer*eye(MicNum))*steer_vec/(steer_vec'*inv(Ryy(:, :, n)+dia_load_beamformer*eye(MicNum))*steer_vec);
-        for FrameNo = 1:NumOfFrame
-            output_abs(ang+91, :) = output_abs(ang+91, :) + abs(w_MPDR'*squeeze(Y(n, FrameNo, :)));
-        end
+        array_output_power = 1/(steer_vec'*inv(Ryy(:, :, n)+dia_load_beamformer*eye(MicNum))*steer_vec);
+        output_abs_angle(angle_count, :) = output_abs_angle(angle_count, :) + abs(array_output_power);
 
     end
 
 end
 
 figure(1)
-plot(output_abs.');
+plot(angle, output_abs_angle.');
 title('angle function')
 xlabel('angle')
 ylabel('output power')
 shg
 
-%% GSS for anglewise freefield plane wave localization %%
-gss_left = max(output_abs)
-gss_right = 
+%% GSS for angle-wise freefield plane wave localization %%
+[~, max_integer_angle] = max(output_abs_angle);
+left_bound = angle(:, max_integer_angle-1);
+right_bound = angle(:, max_integer_angle+1);
+golden_ratio = (1+sqrt(5))/2;
+search_ratio = golden_ratio - 1;
+stop_criteron = 1e-7;
+
+iteration_times_angle = 0;
+while 1
+    iteration_times_angle = iteration_times_angle + 1;
+    left_insert = right_bound - search_ratio*(right_bound-left_bound);
+    right_insert = left_bound + search_ratio*(right_bound-left_bound);
+    
+    left_insert_output = GSS_MPDR_angle_obj_func(left_insert, frequency, freqs_vector, c, MicPos, Ryy, MicNum, dia_load_beamformer);
+    right_insert_output = GSS_MPDR_angle_obj_func(right_insert, frequency, freqs_vector, c, MicPos, Ryy, MicNum, dia_load_beamformer);
+
+    if left_insert_output > right_insert_output
+        right_bound = right_insert;
+    elseif left_insert_output <= right_insert_output
+        left_bound = left_insert;
+    end
+
+    if right_bound-left_bound < stop_criteron
+        break
+    end
+
+end
+
+final_angle = (left_bound+right_bound)/2;
+
+%% GSS for distnce-wise RTF cosine similarity %%
+left_bound = 0;
+right_bound = 2;
+golden_ratio = (1+sqrt(5))/2;
+search_ratio = golden_ratio - 1;
+stop_criteron = 1e-7;
+
+iteration_times_distnce = 0;
+while 1
+    iteration_times_distnce = iteration_times_distnce + 1;
+    left_insert = right_bound - search_ratio*(right_bound-left_bound);
+    right_insert = left_bound + search_ratio*(right_bound-left_bound);
+    
+    left_insert_output = GSS_CTF_distance_obj_func;
+    right_insert_output = GSS_CTF_distance_obj_func;
+
+    if left_insert_output > right_insert_output
+        right_bound = right_insert;
+    elseif left_insert_output <= right_insert_output
+        left_bound = left_insert;
+    end
+
+    if right_bound-left_bound < stop_criteron
+        break
+    end
+
+end
 
 
-%% distance freefield spherical wave localization %%
 
