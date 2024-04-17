@@ -91,4 +91,4 @@ end
 RTF_from_freefield = ATF_from_freefield./ATF_from_freefield(1, :);
 RTF_from_freefield = reshape(RTF_from_freefield.', [MicNum*frequency 1]);
 
-cosine_similarity = RTF_from_CTF'*RTF_from_freefield/norm(RTF_from_CTF)/norm(RTF_from_freefield);
+cosine_similarity = abs(RTF_from_CTF'*RTF_from_freefield/norm(RTF_from_CTF)/norm(RTF_from_freefield));

@@ -201,8 +201,8 @@ right_bound = angle(:, max_integer_angle+1);
 golden_ratio = (1+sqrt(5))/2;
 search_ratio = golden_ratio - 1;
 stop_criteron = 1e-7;
-
 iteration_times_angle = 0;
+
 while 1
     iteration_times_angle = iteration_times_angle + 1;
     left_insert = right_bound - search_ratio*(right_bound-left_bound);
@@ -235,6 +235,7 @@ stop_criteron = 1e-7;
 iteration_times_distnce = 0;
 left_move = 1;
 right_move = 1;
+
 while 1
     iteration_times_distnce = iteration_times_distnce + 1;
     left_insert = right_bound - search_ratio*(right_bound-left_bound);
