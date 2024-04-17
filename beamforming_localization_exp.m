@@ -1,6 +1,8 @@
 clc; clear;
 close all;
 
+tic
+
 %% parameters setting %%
 SorNum = 1;
 c = 343;
@@ -154,7 +156,7 @@ end
 final_angle = (left_bound+right_bound)/2;
 
 %% GSS for distnce-wise RTF cosine similarity %%
-mode = 'plane wave';    % 'plane wave' or 'spherical wave'
+mode = 'spherical wave';    % 'plane wave' or 'spherical wave'
 left_bound = 0;
 right_bound = 2;
 golden_ratio = (1+sqrt(5))/2;
@@ -162,25 +164,48 @@ search_ratio = golden_ratio - 1;
 stop_criteron = 1e-7;
 
 iteration_times_distnce = 0;
+left_move = 1;
+right_move = 1;
 while 1
     iteration_times_distnce = iteration_times_distnce + 1;
     left_insert = right_bound - search_ratio*(right_bound-left_bound);
     right_insert = left_bound + search_ratio*(right_bound-left_bound);
-    
-    left_insert_output = GSS_CTF_distance_obj_func(left_insert, final_angle, MicNum, SorNum, MicPos, fs, c, NFFT, hopsize, points_rir, Y_wpe, Y_delay, mode);
-    right_insert_output = GSS_CTF_distance_obj_func(right_insert, final_angle, MicNum, SorNum, MicPos, fs, c, NFFT, hopsize, points_rir, Y_wpe, Y_delay, mode);
+
+    if right_move == 1 && left_move == 1
+        left_insert_output = GSS_CTF_distance_obj_func(left_insert, final_angle, MicNum, SorNum, MicPos, fs, c, NFFT, hopsize, points_rir, Y_wpe, Y_delay, mode);
+        right_insert_output = GSS_CTF_distance_obj_func(right_insert, final_angle, MicNum, SorNum, MicPos, fs, c, NFFT, hopsize, points_rir, Y_wpe, Y_delay, mode);
+        right_move = 0;
+        leftt_move = 0;
+
+    elseif right_move == 1 && left_move == 0
+        right_insert_output = left_insert_output;
+        left_insert_output = GSS_CTF_distance_obj_func(left_insert, final_angle, MicNum, SorNum, MicPos, fs, c, NFFT, hopsize, points_rir, Y_wpe, Y_delay, mode);
+        right_move = 0;
+
+    elseif right_move == 0 && left_move == 1
+        left_insert_output = right_insert_output;
+        right_insert_output = GSS_CTF_distance_obj_func(right_insert, final_angle, MicNum, SorNum, MicPos, fs, c, NFFT, hopsize, points_rir, Y_wpe, Y_delay, mode);
+        leftt_move = 0;
+
+    end
 
     if left_insert_output > right_insert_output
         right_bound = right_insert;
+        right_move = 1;
+
     elseif left_insert_output <= right_insert_output
         left_bound = left_insert;
+        left_move = 1;
+
     end
 
     if right_bound-left_bound < stop_criteron
         break
+
     end
 
 end
 
 final_distance = (left_bound+right_bound)/2;
 
+toc

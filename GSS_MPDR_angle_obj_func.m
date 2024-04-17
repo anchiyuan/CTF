@@ -1,8 +1,8 @@
-function output_abs = GSS_MPDR_angle_obj_func(ang, frequency, freqs_vector, c, MicPos, Ryy, MicNum, dia_load_beamformer)
+function output_abs = GSS_MPDR_angle_obj_func(ang, frequency_lower_bound, frequency, freqs_vector, c, MicPos, Ryy, MicNum, dia_load_beamformer)
 
 output_abs = 0;
 kappa = [sind(ang), cosd(ang), 0];
-for n = 1:frequency
+for n = frequency_lower_bound:frequency
     omega = 2*pi*freqs_vector(n);
     steer_vec = exp(1j*omega/c*kappa*MicPos.').';
     array_output_power = 1/(steer_vec'*inv(Ryy(:, :, n)+dia_load_beamformer*eye(MicNum))*steer_vec);
