@@ -11,9 +11,17 @@ MicNum = 10;                                             % number of microphone
 c = 343;                                                 % Sound velocity (m/s)
 fs = 16000;                                              % Sample frequency (samples/s)
 
+% % ULA %
+% MicStart = [1, 1.5, 1];
+% spacing = 0.02;
+% MicPos = zeros(MicNum, 3);
+% for i = 1:MicNum
+%     MicPos(i, :) = [MicStart(1, 1)+(i-1)*spacing MicStart(1, 2) MicStart(1, 3)];
+% end
+
 % subarray %
 MicStart_left = [1, 1.5, 1];
-MicStart_right = [4, 1.5, 1];
+MicStart_right = [1.5, 1.5, 1];
 spacing = 0.02;
 MicPos = zeros(MicNum, 3);
 for i = 1:MicNum
@@ -135,7 +143,7 @@ angle = -90:1:90;
 output_abs_angle = zeros(size(angle, 2), 1);
 dia_load_beamformer = 10^(-2);
 angle_count = 0;
-frequency_lower_bound = 300;
+frequency_lower_bound = 400;
 
 array_output_power = zeros(frequency, size(angle, 2));
 
@@ -207,7 +215,7 @@ final_angle = (left_bound+right_bound)/2;
 
 %% GSS for distnce-wise RTF cosine similarity %%
 left_bound = 0;
-right_bound = 2;
+right_bound = 8;
 iteration_times_distnce = 0;
 left_move = 1;
 right_move = 1;
@@ -218,19 +226,19 @@ while 1
     right_insert = left_bound + search_ratio*(right_bound-left_bound);
 
     if right_move == 1 && left_move == 1
-        left_insert_output = GSS_RTF_distance_obj_func(left_insert, final_angle, NFFT, hopsize, fs, y_nodelay, MicNum, MicPos);
-        right_insert_output = GSS_RTF_distance_obj_func(right_insert, final_angle, NFFT, hopsize, fs, y_nodelay, MicNum, MicPos);
+        left_insert_output = GSS_RTF_distance_obj_func(left_insert, final_angle, NFFT, hopsize, fs, c, y_nodelay, MicNum, MicPos);
+        right_insert_output = GSS_RTF_distance_obj_func(right_insert, final_angle, NFFT, hopsize, fs, c, y_nodelay, MicNum, MicPos);
         right_move = 0;
         leftt_move = 0;
 
     elseif right_move == 1 && left_move == 0
         right_insert_output = left_insert_output;
-        left_insert_output = GSS_RTF_distance_obj_func(left_insert, final_angle, NFFT, hopsize, fs, y_nodelay, MicNum, MicPos);
+        left_insert_output = GSS_RTF_distance_obj_func(left_insert, final_angle, NFFT, hopsize, fs, c, y_nodelay, MicNum, MicPos);
         right_move = 0;
 
     elseif right_move == 0 && left_move == 1
         left_insert_output = right_insert_output;
-        right_insert_output = GSS_RTF_distance_obj_func(right_insert, final_angle, NFFT, hopsize, fs, y_nodelay, MicNum, MicPos);
+        right_insert_output = GSS_RTF_distance_obj_func(right_insert, final_angle, NFFT, hopsize, fs, c, y_nodelay, MicNum, MicPos);
         leftt_move = 0;
 
     end

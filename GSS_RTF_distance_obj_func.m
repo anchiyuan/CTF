@@ -1,4 +1,4 @@
-function s = GSS_RTF_distance_obj_func(dis, ang, NFFT, hopsize, fs, y_nodelay, MicNum, MicPos)
+function s = GSS_RTF_distance_obj_func(dis, ang, NFFT, hopsize, fs, c, y_nodelay, MicNum, MicPos)
 
 %% parameters setting %%
 win = hamming(NFFT);
