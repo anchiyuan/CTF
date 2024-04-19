@@ -227,7 +227,7 @@ distance = 0:0.1:6;
 distance_count = 0;
 spectrum = zeros(frequency, size(distance, 2));
 spectrum_sum = zeros(size(distance, 2), 1);
-frequency_lower_bound = 1;
+frequency_lower_bound = 400;
 
 for dis = distance
     distance_count = distance_count + 1;
