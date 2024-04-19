@@ -6,7 +6,7 @@ tic
 %% RIR parameter %%
 SorNum = 1;                                              % source number
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-MicNum = 10;                                             % number of microphone
+MicNum = 8;                                             % number of microphone
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 c = 343;                                                 % Sound velocity (m/s)
 fs = 16000;                                              % Sample frequency (samples/s)
@@ -35,7 +35,7 @@ end
 
 referencce_point = (MicPos(MicNum/2, :)+MicPos(MicNum/2+1, :))/2;
 
-SorPos = [3.9, 4, 1];                                    % source position (m)
+SorPos = [3, 4, 1];                                    % source position (m)
 room_dim = [5, 6, 2.5];                                  % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 reverberation_time = 0.2;                                % Reverberation time (s)
@@ -92,6 +92,8 @@ xlabel('points')
 ylabel('amplitude')
 shg
 
+[~, argmax_tf] = max(abs(h.'));
+
 %% window parameter %%
 NFFT = 1024;
 hopsize = 256;
@@ -140,12 +142,11 @@ MicPos = MicPos - referencce_point;
 
 %% check angle function is convex or not %%
 angle = -90:1:90;
-output_abs_angle = zeros(size(angle, 2), 1);
+array_output_power = zeros(frequency, size(angle, 2));
+output_power_sum = zeros(size(angle, 2), 1);
 dia_load_beamformer = 10^(-2);
 angle_count = 0;
 frequency_lower_bound = 400;
-
-array_output_power = zeros(frequency, size(angle, 2));
 
 for ang = angle
     angle_count = angle_count + 1;
@@ -153,37 +154,31 @@ for ang = angle
     for n = frequency_lower_bound:frequency
         omega = 2*pi*freqs_vector(n);
         steer_vec = exp(1j*omega/c*kappa*MicPos.').';
-%         w = steer_vec/MicNum;
-%         for FrameNo = 1:NumOfFrame
-%             array_output_power(n, angle_count) =array_output_power(n, angle_count) + abs(w'*squeeze(Y_nodelay(n, FrameNo, :)));
-%         end
-        
+
         array_output_power(n, angle_count) = 1/(steer_vec'*inv(Ryy(:, :, n)+dia_load_beamformer*eye(MicNum))*steer_vec);
-        output_abs_angle(angle_count, :) = output_abs_angle(angle_count, :) + abs(array_output_power(n, angle_count));
-
-%         output_abs_angle(angle_count, :) = output_abs_angle(angle_count, :) + abs(array_output_power);
-
+        output_power_sum(angle_count, :) = output_power_sum(angle_count, :) + abs(array_output_power(n, angle_count));
     end
 
 end
 
-figure(23);
-mesh(10*log10(abs(array_output_power)))
+[meshgrid_x, meshgrid_y] = meshgrid(angle ,freqs_vector(frequency_lower_bound:frequency));
+figure(3);
+mesh(meshgrid_x, meshgrid_y, 10*log10(abs(array_output_power(frequency_lower_bound:frequency, :))))
 colorbar
 view(2)
+title('output power')
+xlabel('angle')
+ylabel('frequency')
 
-[~, argmax_tf] = max(abs(h.'));
-
-
-figure(3)
-plot(angle, output_abs_angle.');
-title('angle function')
+figure(4)
+plot(angle, output_power_sum.');
+title('output power as function of angle')
 xlabel('angle')
 ylabel('output power')
 shg
 
 %% GSS for angle-wise freefield plane wave localization %%
-[~, max_index] = max(output_abs_angle);
+[~, max_index] = max(output_power_sum);
 left_bound = angle(:, max_index-1);
 right_bound = angle(:, max_index+1);
 golden_ratio = (1+sqrt(5))/2;
@@ -211,7 +206,46 @@ while 1
 
 end
 
-final_angle = (left_bound+right_bound)/2;
+angle_final = (left_bound+right_bound)/2;
+
+%% check distance function is convex or not %%
+distance = 0:0.1:6;
+distance_count = 0;
+s = zeros(size(distance, 2), 1);
+RTF_tfestimate =  tfestimate(y_nodelay(1, :), y_nodelay.', win, NFFT-hopsize, NFFT).';
+RTF_tfestimate = reshape(RTF_tfestimate, [MicNum*frequency 1]);
+
+
+for dis = distance
+    distance_count = distance_count + 1;
+    source_pos = [dis*sind(angle_final), dis*cosd(angle_final), 0];
+
+    r = zeros(MicNum, 1);
+    for i = 1 : MicNum
+        r(i, :) =  sqrt(sum((source_pos - MicPos(i, :)).^2));
+    end
+
+    ATF_freefield = zeros(MicNum, frequency);
+    for n = 1:frequency
+        omega = 2*pi*freqs_vector(n);
+        ATF_freefield(:, n) = exp(-1j*omega/c*r)./r;
+    end
+
+    RTF_freefield = (ATF_freefield./ATF_freefield(1, :)).';
+
+    RTF_freefield = reshape(RTF_freefield, [MicNum*frequency 1]);
+
+    gamma = RTF_tfestimate'*RTF_freefield/norm(RTF_tfestimate)/norm(RTF_freefield);
+    s(distance_count, :) = 1/(1-real(gamma));
+
+end
+
+figure(5)
+plot(distance, s.');
+title('s as function of distance')
+xlabel('distance')
+ylabel('s')
+shg
 
 %% GSS for distnce-wise RTF cosine similarity %%
 left_bound = 0;
@@ -226,19 +260,19 @@ while 1
     right_insert = left_bound + search_ratio*(right_bound-left_bound);
 
     if right_move == 1 && left_move == 1
-        left_insert_output = GSS_RTF_distance_obj_func(left_insert, final_angle, NFFT, hopsize, fs, c, y_nodelay, MicNum, MicPos);
-        right_insert_output = GSS_RTF_distance_obj_func(right_insert, final_angle, NFFT, hopsize, fs, c, y_nodelay, MicNum, MicPos);
+        left_insert_output = GSS_RTF_distance_obj_func(left_insert, angle_final, NFFT, hopsize, fs, c, y_nodelay, MicNum, MicPos);
+        right_insert_output = GSS_RTF_distance_obj_func(right_insert, angle_final, NFFT, hopsize, fs, c, y_nodelay, MicNum, MicPos);
         right_move = 0;
         leftt_move = 0;
 
     elseif right_move == 1 && left_move == 0
         right_insert_output = left_insert_output;
-        left_insert_output = GSS_RTF_distance_obj_func(left_insert, final_angle, NFFT, hopsize, fs, c, y_nodelay, MicNum, MicPos);
+        left_insert_output = GSS_RTF_distance_obj_func(left_insert, angle_final, NFFT, hopsize, fs, c, y_nodelay, MicNum, MicPos);
         right_move = 0;
 
     elseif right_move == 0 && left_move == 1
         left_insert_output = right_insert_output;
-        right_insert_output = GSS_RTF_distance_obj_func(right_insert, final_angle, NFFT, hopsize, fs, c, y_nodelay, MicNum, MicPos);
+        right_insert_output = GSS_RTF_distance_obj_func(right_insert, angle_final, NFFT, hopsize, fs, c, y_nodelay, MicNum, MicPos);
         leftt_move = 0;
 
     end
@@ -260,6 +294,6 @@ while 1
 
 end
 
-final_distance = (left_bound+right_bound)/2;
+distance_final = (left_bound+right_bound)/2;
 
 toc

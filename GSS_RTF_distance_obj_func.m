@@ -24,11 +24,9 @@ end
 
 RTF_freefield = (ATF_freefield./ATF_freefield(1, :)).';    % frequency x MicNum
 
-
 %% objective function %%
 RTF_tfestimate = reshape(RTF_tfestimate, [MicNum*frequency 1]);
 RTF_freefield = reshape(RTF_freefield, [MicNum*frequency 1]);
 
 gamma = RTF_tfestimate'*RTF_freefield/norm(RTF_tfestimate)/norm(RTF_freefield);
 s = 1/(1-real(gamma));
-
