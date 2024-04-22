@@ -6,7 +6,7 @@ tic
 %% RIR parameter %%
 SorNum = 1;                                              % source number
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-MicNum = 20;                                             % number of microphone
+MicNum = 10;                                             % number of microphone
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 c = 343;                                                 % Sound velocity (m/s)
 fs = 16000;                                              % Sample frequency (samples/s)
@@ -155,9 +155,11 @@ MicPos = MicPos - referencce_point;
 angle = -90:1:90;
 array_output_power = zeros(frequency, size(angle, 2));
 output_power_sum = zeros(size(angle, 2), 1);
+
 dia_load_beamformer = 10^(-2);
-angle_count = 0;
 frequency_lower_bound = 400;
+
+angle_count = 0;
 
 for ang = angle
     angle_count = angle_count + 1;
@@ -166,11 +168,11 @@ for ang = angle
         omega = 2*pi*freqs_vector(n);
         steer_vec = exp(1j*omega/c*kappa*MicPos.').';
 
-        array_output_power(n, angle_count) = 1/(steer_vec'*P_N(:, :, n)*steer_vec);
-        output_power_sum(angle_count, :) = output_power_sum(angle_count, :) + abs(array_output_power(n, angle_count));
+        % array_output_power(n, angle_count) = 1/(steer_vec'*P_N(:, :, n)*steer_vec);
+        % output_power_sum(angle_count, :) = output_power_sum(angle_count, :) + abs(array_output_power(n, angle_count));
 
-%         array_output_power(n, angle_count) = 1/(steer_vec'*inv(Ryy(:, :, n)+dia_load_beamformer*eye(MicNum))*steer_vec);
-%         output_power_sum(angle_count, :) = output_power_sum(angle_count, :) + abs(array_output_power(n, angle_count));
+        array_output_power(n, angle_count) = 1/(steer_vec'*inv(Ryy(:, :, n)+dia_load_beamformer*eye(MicNum))*steer_vec);
+        output_power_sum(angle_count, :) = output_power_sum(angle_count, :) + abs(array_output_power(n, angle_count));
     end
 
 end
@@ -195,9 +197,11 @@ shg
 [~, max_index] = max(output_power_sum);
 left_bound = angle(:, max_index-1);
 right_bound = angle(:, max_index+1);
+
 golden_ratio = (1+sqrt(5))/2;
 search_ratio = golden_ratio - 1;
 stop_criteron = 1e-7;
+
 iteration_times_angle = 0;
 
 while 1
@@ -223,11 +227,12 @@ end
 angle_final = (left_bound+right_bound)/2;
 
 %% check distance function is convex or not %%
-distance = 0:0.1:6;
+distance = 0:0.1:5;
+array_output_power = zeros(frequency, size(distance, 2));
+output_power_sum = zeros(size(distance, 2), 1);
+frequency_lower_bound = 1;
+
 distance_count = 0;
-spectrum = zeros(frequency, size(distance, 2));
-spectrum_sum = zeros(size(distance, 2), 1);
-frequency_lower_bound = 400;
 
 for dis = distance
     distance_count = distance_count + 1;
@@ -240,28 +245,32 @@ for dis = distance
 
     for n = frequency_lower_bound:frequency
         omega = 2*pi*freqs_vector(n);
-        ATF_freefield = exp(-1j*omega/c*r)./r;
-        spectrum(n, distance_count) = 1/(ATF_freefield'*P_N(:, :, n)*ATF_freefield);
-        spectrum_sum(distance_count, :) = spectrum_sum(distance_count, :) + abs(spectrum(n, distance_count));
+        steer_vec = exp(-1j*omega/c*r)./r;
+
+        array_output_power(n, distance_count) = steer_vec'*Ryy(:, :, n)*steer_vec;
+        output_power_sum(distance_count, :) = output_power_sum(distance_count, :) + abs(array_output_power(n, distance_count));
+
+        % array_output_power(n, distance_count) = 1/(steer_vec'*P_N(:, :, n)*steer_vec);
+        % output_power_sum(distance_count, :) = output_power_sum(distance_count, :) + abs(array_output_power(n, distance_count));
     end
 
 end
 
 [meshgrid_x, meshgrid_y] = meshgrid(distance ,freqs_vector(frequency_lower_bound:frequency));
 figure(5);
-mesh(meshgrid_x, meshgrid_y, 10*log10(abs(spectrum(frequency_lower_bound:frequency, :))))
+mesh(meshgrid_x, meshgrid_y, 10*log10(abs(array_output_power(frequency_lower_bound:frequency, :))))
 colorbar
 view(2)
-title('spectrum')
+title('output power')
 xlabel('distance')
 ylabel('frequency')
 
 
 figure(6)
-plot(distance, spectrum_sum.');
-title('spectrum as function of distance')
+plot(distance, output_power_sum.');
+title('OUTPU as function of distance')
 xlabel('distance')
-ylabel('spectrum')
+ylabel('magnitude')
 shg
 
 %% GSS for distnce-wise MUSIC %%
