@@ -16,7 +16,7 @@ MicPos = zeros(MicNum, 3);
 sa_num = 4;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 micnum_in_sa = 2;
-sa_center = [1, 1, 1; 1, 4, 1; 4, 4, 1; 4, 1, 1];
+sa_center = [2, 2, 1; 2, 3, 1; 3, 3, 1; 3, 2, 1];
 sa_space = 0.01;
 mic_space = 0.02;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -37,13 +37,13 @@ referencce_point = mean(sa_center);
 
 % UCA %
 UCA_num = MicNum - sparce_num;
-radius_UCA = 0.25;
+radius_UCA = 0.1;
 angle_UCA = 360/UCA_num;
 for i = 1:UCA_num
     MicPos(i+sparce_num, :) = [referencce_point(:, 1)+radius_UCA*sind((i-1)*angle_UCA), referencce_point(:, 2)+radius_UCA*cosd((i-1)*angle_UCA), referencce_point(:, 3)];
 end
 
-SorPos = [1.5, 3.2, 1];                                    % source position (m)
+SorPos = [2.25, 2.75, 1];                                    % source position (m)
 room_dim = [5, 6, 2.5];                                  % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 reverberation_time = 0.2;                                % Reverberation time (s)
@@ -235,7 +235,7 @@ end
 angle_final = (left_bound+right_bound)/2;
 
 %% check distance function is convex or not %%
-distance = 0.1:0.1:2.1;
+distance = 0.1:0.1:0.7;
 array_output_power = zeros(frequency, size(distance, 2));
 output_power_sum = zeros(size(distance, 2), 1);
 frequency_lower_bound = 1;
