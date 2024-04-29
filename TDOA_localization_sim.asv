@@ -18,7 +18,7 @@ mic_z = [ 50  ;  50 ;  50 ;  50 ; 200 ; 200 ; 200 ; 200 ; 200 ]./100;
 MicPos = [mic_x, mic_y, mic_z,];
 
 
-SorPos = [3.5, 1.7, 1];                                    % source position (m)
+SorPos = [1.4, 3, 1];                                    % source position (m)
 room_dim = [5, 6, 2.5];                                  % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 reverberation_time = 0.2;                                % Reverberation time (s)
@@ -129,6 +129,7 @@ dia_load_psi = 1;
 invpsi = inv(psi+dia_load_psi*eye(MicNum-1)); 
 P = [1 0 0 0;0 1 0 0;0 0 1 0;0 0 0 -1];
 
+
 syms L
 F = pinv( A.'*invpsi*A+L*P )*( A.'*invpsi*b );
 c1 = F.'*P*F;
@@ -160,33 +161,33 @@ L2;
 
 sorpos_estimation = ( pinv( A.'*invpsi*A+L2*P )*( A.'*invpsi*b ) );
 
-toc
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+threshold = 1e-2;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+iteration_time = 0;
+lambda_old = -1;
+lambda_new = 1;
+theta_old = pinv(A.'*invpsi*A+lambda_old*P)*A.'*invpsi*b;
+theta_new = pinv(A.'*invpsi*A+lambda_new*P)*A.'*invpsi*b;
+I_old = theta_old.'*P*theta_old;
+I_new = theta_new.'*P*theta_new;
+while 1
+    iteration_time = iteration_time + 1;
+    lambda_tmp = lambda_new;
+    I_tmp = I_new;
+    lambda_new = lambda_old - I_new*(lambda_new-lambda_old)/(I_new-I_old);
+    if isnan(lambda_new)
+        break;
+    end
+    theta_new = pinv(A.'*invpsi*A+lambda_new*P)*A.'*invpsi*b;
+    I_new = theta_new.'*P*theta_new;
+    if abs(lambda_new-lambda_tmp) < threshold
+        sorpos_estimation = theta_new(1:3, :).';
+        break;
+    end
 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% threshold = 1e-2;
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% iteration_time = 0;
-% lambda_old = -1;
-% lambda_new = 1;
-% theta_old = pinv(A.'*invpsi*A+lambda_old*P)*A.'*invpsi*b;
-% theta_new = pinv(A.'*invpsi*A+lambda_new*P)*A.'*invpsi*b;
-% I_old = theta_old.'*P*theta_old;
-% I_new = theta_new.'*P*theta_new;
-% while 1
-%     iteration_time = iteration_time + 1;
-%     lambda_tmp = lambda_new;
-%     I_tmp = I_new;
-%     lambda_new = lambda_old - I_new*(lambda_new-lambda_old)/(I_new-I_old);
-%     if isnan(lambda_new)
-%         break;
-%     end
-%     theta_new = pinv(A.'*invpsi*A+lambda_new*P)*A.'*invpsi*b;
-%     I_new = theta_new.'*P*theta_new;
-%     if abs(lambda_new-lambda_tmp) < threshold
-%         sorpos_estimation = theta_new(1:3, :).';
-%         break;
-%     end
-% 
-%     lambda_old = lambda_tmp;
-%     I_old = I_tmp;
-% end
+    lambda_old = lambda_tmp;
+    I_old = I_tmp;
+end
+
+toc

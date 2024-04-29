@@ -43,45 +43,64 @@ G_out(1, end) = abs(G_out(1, end));
 G_total = [G_out, conj(fliplr((G_out(1, 2:end-1))))];
 phi = ifft(G_total, NFFT);
 
-%% cheak delay or advance %%
+%% cheak delay or advance
 [~, s] = max(abs(phi));
 ss = s;
 if ss > (NWIN/2)
     s = NWIN + 1 - s;
 end
 
-%% Interpolation %%
+%% Interpolation
 tt = -NWIN/fs/2:1/(10*fs):NWIN/fs/2;
 T = 1/(fs);
-phi_t = zeros(length(tt), 1);
 for m = 1:length(tt)
-    phi_t(m) = 0;
+    phi_t(m)=0;
     
-    si = s-20;
-    sf = s+20;
-    if si < 1
-        si = 1;
+    si=s-20;
+    sf=s+20;
+    if si<1
+        si=1;
+    end        
+    if sf>NWIN
+        sf=NWIN;
     end
+    
+    for n=si:sf
 
-    if sf > NWIN
-        sf = NWIN;
-    end
-    
-    for n = si:sf
-        if tt(m) == n*T
-            phi_t(m) = phi_t(m) + phi(n);
+        if tt(m)==n*T;
+            phi_t(m)=phi_t(m)+phi(n);
         else       
-            phi_t(m) = phi_t(m) + phi(n)*sin(pi*(tt(m)-n*T)/T)/(pi*(tt(m)-n*T)/T);
+            phi_t(m)=phi_t(m)+phi(n)*sin(pi*(tt(m)-n*T)/T)/(pi*(tt(m)-n*T)/T);
         end
-
     end
-
 end
 
-[~,a] = max(abs(phi_t));
-if ss > (NWIN/2)
-    delay_time = -tt(a);
-else
-    delay_time = tt(a);
+
+ [~,a]=max(abs(phi_t));
+ if ss > (NWIN/2)
+    delay_time=-tt(a);
+ else
+    delay_time=tt(a);
+ end
 end
+
+
+
+
+
+    
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+    
     
