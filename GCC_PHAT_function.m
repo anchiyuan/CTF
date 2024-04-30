@@ -1,12 +1,12 @@
 function delay_time = GCC_PHAT_function(x1, x2, Fs)
 
 %% resemple mic signals %%
-fs = 8000;
+fs = 16000;
 x1 = resample(x1, fs, Fs);
 x2 = resample(x2, fs, Fs);
 
 %% Window parameters %%
-NWIN = 512;
+NWIN = 1024;
 hopsize = NWIN/2;
 NumOfFrame = 2*floor(length(x1)/NWIN)-1;
 win = hann(NWIN+1);
@@ -51,14 +51,14 @@ if ss > (NWIN/2)
 end
 
 %% Interpolation %%
-tt = -NWIN/fs/2:1/(10*fs):NWIN/fs/2;
+tt = -NWIN/fs/2:1/(100*fs):NWIN/fs/2;
 T = 1/(fs);
 phi_t = zeros(length(tt), 1);
 for m = 1:length(tt)
     phi_t(m) = 0;
     
-    si = s-20;
-    sf = s+20;
+    si = s-100;
+    sf = s+100;
     if si < 1
         si = 1;
     end

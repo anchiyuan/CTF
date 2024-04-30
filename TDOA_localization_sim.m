@@ -11,17 +11,16 @@ MicNum = 9;                                             % number of microphone
 c = 343;                                                 % Sound velocity (m/s)
 fs = 16000;                                              % Sample frequency (samples/s)
 
+% distributed array % 
 mic_x = [ 100 ; 400 ; 400 ; 100 ; 100 ; 400 ; 400 ; 100 ; 250 ]./100;
 mic_y = [ 100 ; 100 ; 400 ; 400 ; 100 ; 100 ; 400 ; 400 ; 250 ]./100;
 mic_z = [ 50  ;  50 ;  50 ;  50 ; 200 ; 200 ; 200 ; 200 ; 200 ]./100;
-
 MicPos = [mic_x, mic_y, mic_z,];
 
-
-SorPos = [3.5, 1.7, 1];                                    % source position (m)
+SorPos = [3, 3.5, 1.2];                                    % source position (m)
 room_dim = [5, 6, 2.5];                                  % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-reverberation_time = 0.2;                                % Reverberation time (s)
+reverberation_time = 0.12;                                % Reverberation time (s)
 points_rir = 2048;                                       % Number of rir points (需比 reverberation time 還長)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mtype = 'omnidirectional';                               % Type of microphone
@@ -45,6 +44,16 @@ ylabel('y\_axis')
 zlabel('z\_axis')
 title('空間圖')
 shg
+
+distance = zeros(MicNum, 1);
+for i = 1:MicNum
+    distance(i, :) = sqrt(sum((SorPos - MicPos(i, :)).^2));
+end
+
+difference_groundtruth = zeros(MicNum-1, 1);
+for i = 1:MicNum-1
+    difference_groundtruth(i, :) = sqrt(sum((SorPos - MicPos(i+1, :)).^2)) - sqrt(sum((SorPos - MicPos(1, :)).^2));
+end
 
 referencce_point = MicPos(1, :);
 sorpos_groundtruth = SorPos - referencce_point;
@@ -75,23 +84,16 @@ shg
 
 [~, argmax_tf] = max(abs(h.'));
 
-%% window parameter %%
-NFFT = 1024;
-hopsize = 256;
-win = hamming(NFFT);
-frequency = NFFT/2 + 1;
-freqs_vector = linspace(0, fs/2, frequency);
-
 %% 讀音檔 or 產生 white noise source (source) %%
 Second = 23;
 SorLen =  Second*fs;
 
 % load speech source %
-% [source_transpose, fs] = audioread('245.wav', [1, SorLen]);    % speech source
-% source = source_transpose.';
+[source_transpose, fs] = audioread('245.wav', [1, SorLen]);    % speech source
+source = source_transpose.';
 
 % load white noise source %
-source = wgn(1, SorLen, 0);                                    % white noise source
+% source = wgn(1, SorLen, 0);                                    % white noise source
 
 %% 產生麥克風訊號，在時域上 (y) %%
 % convolution source and RIR %
@@ -103,62 +105,57 @@ end
 y = as(:, 1:SorLen);
 
 %% TDOA localization %%
-% GCC-PHAT for TDOA estimation %
+% GCC-PHAT for delay estimation %
 delay = zeros(MicNum-1, 1);
-distance = zeros(MicNum-1, 1);
+difference = zeros(MicNum-1, 1);
 for i = 1:MicNum-1
-    delay(i, :) = GCC_PHAT_function(y(1,:), y(i+1,:), fs);
-    distance(i, :) = delay(i, :)*c;
+    delay(i, :) = gccphat(y(i+1,:).', y(1,:).', fs);
+    difference(i, :) = delay(i, :)*c;
 end
 
-MicPos = MicPos - referencce_point;
-distance_groundtruth = zeros(MicNum-1, 1);
-for i = 1:MicNum-1
-    distance_groundtruth(i, :) = sqrt(sum((sorpos_groundtruth - MicPos(i+1, :)).^2)) - sqrt(sum((sorpos_groundtruth - MicPos(1, :)).^2));
-end
+% calibrate mics position with repect to reference point %
+micpos = MicPos - referencce_point;
 
-distance = distance_groundtruth;
-
-A = 2*[MicPos(2:end, :), distance];
-b = MicPos(2:end, 1).^2 + MicPos(2:end, 2).^2 + MicPos(2:end, 3).^2 - distance.^2;
+% generate parameters matrix %
+A = 2*[micpos(2:end, :), difference];
+b = micpos(2:end, 1).^2 + micpos(2:end, 2).^2 + micpos(2:end, 3).^2 - difference.^2;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 sigma = 0.01;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-psi = 4*sigma^2*(ones(MicNum-1, 1)*ones(MicNum-1, 1).' + eye(MicNum-1))*distance*distance.';
+psi = 4*sigma^2*(ones(MicNum-1, 1)*ones(MicNum-1, 1).' + eye(MicNum-1))*difference*difference.';
 dia_load_psi = 1;
 invpsi = inv(psi+dia_load_psi*eye(MicNum-1)); 
 P = [1 0 0 0;0 1 0 0;0 0 1 0;0 0 0 -1];
 
+% find possible root %
 syms L
-F = pinv( A.'*invpsi*A+L*P )*( A.'*invpsi*b );
-c1 = F.'*P*F;
-[num den]=numden(c1);  %把分子分母多項式分離出來
-num2 = sym2poly(num);   %把多項式係數分離出來，變成向量式
-RR=roots(num2);          %解所有的根(lamda)
-real=RR( find(imag(RR)==0) );   %提出只有實數的根(lamda)
-if length(real)==0 %|| rank(Psi)<(M-1)
-     real=[real;0];
+theta = pinv(A.'*invpsi*A+L*P )*(A.'*invpsi*b);
+I = theta.'*P*theta;
+[num, den] = numden(I);
+poly = sym2poly(num);
+roots = roots(poly);
+roots_real = roots(imag(roots)==0, :);    % 取只有實數的根
+if isempty(roots_real)
+    roots_real = [roots_real; 0];
 end
 
-% 把解出的根帶入cos function ，當cos function最小時所對應的根(lamda)就是所求
-if size(real,1)>1
-    x = pinv( A.'*invpsi*A+real(1)*P )*( A.'*invpsi*b);
-    cosfun1=(A*x-b).'*invpsi*(A*x-b);
-    L2=real(1);
-    for ii=2:length(real)
-        x = pinv( A.'*invpsi*A+real(ii)*P )*( A.'*invpsi*b );
-        cosfun2=(A*x-b).'*invpsi*(A*x-b);
-        if cosfun2<cosfun1
-            L2=real(ii);
-            cosfun1=cosfun2;
-        end
+% find actual root from posible root %
+if size(roots_real, 1) > 1
+    theta = zeros(4, size(roots_real, 1));
+    costfun = zeros(size(roots_real, 1), 1);
+    for i = 1:size(roots_real, 1)
+        theta(:, i) = pinv(A.'*invpsi*A+roots_real(i, :)*P )*(A.'*invpsi*b);
+        costfun(i, :) = (A*theta(:, i)-b).'*invpsi*(A*theta(:, i)-b);
     end
-else
-    L2=real;
-end
-L2;
 
-sorpos_estimation = ( pinv( A.'*invpsi*A+L2*P )*( A.'*invpsi*b ) );
+    [~, min_index] = min(costfun);
+    sorpos_estimation = theta(1:3, min_index).';
+
+else
+    theta = pinv(A.'*invpsi*A+roots_real*P )*(A.'*invpsi*b);
+    sorpos_estimation = theta(1:3, :).';
+
+end
 
 toc
 
