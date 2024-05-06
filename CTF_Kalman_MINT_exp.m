@@ -10,7 +10,7 @@ c = 343;
 Fs = 48000;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fs = 16000;           % 欲 resample 成的取樣頻率
-MicNum = 6;           % 實驗麥克風數量
+MicNum = 8;           % 實驗麥克風數量
 look_mic = 1;         % 指定想要畫圖之麥克風
 points_rir = 2048;    % 自行設定想要輸出的 RIR 長度
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -24,7 +24,6 @@ osfac = round(NFFT/hopsize);
 
 frequency = NFFT/2 + 1;
 L = length(hopsize:hopsize:points_rir+2*NFFT-2);
-L_vector = 1:1:L;
 freqs_vector = linspace(0, fs/2, frequency);
 
 %% read source 音檔 (source) %%
@@ -44,11 +43,9 @@ source = source_transpose.';
 source = resample(source, 1, Fs/fs);
 
 %% source 做 stft (S) %%
-source_transpose = source.';
-[S, ~, ~] = stft(source_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
+[S, ~, ~] = stft(source.', fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
 
 NumOfFrame = size(S, 2);
-NumOfFrame_vector = 1:1:NumOfFrame;
 
 %% read mic 音檔再做 stft (y_nodelay, y_delay and Y_delay) %%
 % load y_nodelay %
@@ -88,17 +85,69 @@ y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
 y_wpe_filename = join(y_wpe_str, '');
 load(y_wpe_filename);
 
-%% DAS beamformer (Y_DAS) %%
-% mic 與 source 之距離 %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-distance = [0.83; 0.832; 0.832; 0.84; 0.852; 0.874];    % 第三顆喇叭
+%% TDOA localization %%
+% GCC-PHAT for delay estimation %
+delay = zeros(MicNum-1, 1);
+difference = zeros(MicNum-1, 1);
+for i = 1:MicNum-1
+    delay(i, :) = gccphat(y_nodelay(i+1,:).', y_nodelay(1,:).', fs);
+    difference(i, :) = delay(i, :)*c;
+end
 
-% SorPos = [1.4126*sind(-6.8484), 1.4126*cosd(-6.8484), 0];
-% distance = zeros(MicNum, 1);
-% for i = 1:MicNum
-%     distance(i, :) = norm(SorPos - [(i-1)*0.07, 0, 0]);
-% end
+% mics position with repect to reference point %
+mic_x = [ 0 ; 100 ; 100 ;   0 ;   0 ; 100 ; 100 ;   0 ]./100;
+mic_y = [ 0 ;   0 ; 100 ; 100 ;   0 ;   0 ; 100 ; 100 ]./100;
+mic_z = [ 0 ;   0 ;   0 ;   0 ; 100 ; 100 ; 100 ; 100 ]./100;
+
+micpos = [mic_x, mic_y, mic_z,];
+
+% generate parameters matrix %
+A = 2*[micpos(2:end, :), difference];
+b = micpos(2:end, 1).^2 + micpos(2:end, 2).^2 + micpos(2:end, 3).^2 - difference.^2;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sigma = 0.01;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+psi = 4*sigma^2*(ones(MicNum-1, 1)*ones(MicNum-1, 1).' + eye(MicNum-1))*difference*difference.';
+dia_load_psi = 1;
+invpsi = inv(psi+dia_load_psi*eye(MicNum-1)); 
+P = [1 0 0 0;0 1 0 0;0 0 1 0;0 0 0 -1];
+
+% find possible root %
+syms L
+theta = pinv(A.'*invpsi*A+L*P )*(A.'*invpsi*b);
+I = theta.'*P*theta;
+[num, den] = numden(I);
+poly = sym2poly(num);
+roots = roots(poly);
+roots_real = roots(imag(roots)==0, :);    % 取只有實數的根
+if isempty(roots_real)
+    roots_real = [roots_real; 0];
+end
+
+% find actual root from posible root %
+if size(roots_real, 1) > 1
+    theta = zeros(4, size(roots_real, 1));
+    costfun = zeros(size(roots_real, 1), 1);
+    for i = 1:size(roots_real, 1)
+        theta(:, i) = pinv(A.'*invpsi*A+roots_real(i, :)*P )*(A.'*invpsi*b);
+        costfun(i, :) = (A*theta(:, i)-b).'*invpsi*(A*theta(:, i)-b);
+    end
+
+    [~, min_index] = min(costfun);
+    sorpos_estimation = theta(1:3, min_index).';
+
+else
+    theta = pinv(A.'*invpsi*A+roots_real*P )*(A.'*invpsi*b);
+    sorpos_estimation = theta(1:3, :).';
+
+end
+
+%% DAS beamformer (Y_DAS) %%
+% 算 mic 與 source 之距離 %
+distance = zeros(MicNum, SorNum);
+for i = 1 : MicNum
+    distance(i, :) =  sqrt(sum((sorpos_estimation - micpos(i, :)).^2));
+end
 
 % 算 a %
 a = zeros(MicNum, SorNum, frequency);
