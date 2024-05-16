@@ -1,11 +1,17 @@
 clc; clear;
 close all;
 
+% 加入資料夾 %
+addpath('wpe_v1.33')
+
+tic
+
 %% RIR parameter %%
 SorNum = 1;                                              % source number
 MicNum = 30;                                             % number of microphone
 c = 343;                                                 % Sound velocity (m/s)
 fs = 16000;                                              % Sample frequency (samples/s)
+Ts = 1/fs;                                               % Sample period (s)
 
 % ULA %
 MicStart = [1, 1.5, 1];
@@ -16,13 +22,25 @@ for i = 1:MicNum
 end
 
 SorPos = [2, 2.6, 1];                                    % source position (m)
+room_dim = [5, 6, 2.5];                                  % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 reverberation_time = 0.8;                                % Reverberation time (s)
 points_rir = 16384;                                       % Number of rir points (需比 reverberation time 還長)
 look_mic = 10;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+mtype = 'omnidirectional';                               % Type of microphone
+order = -1;                                              % -1 equals maximum reflection order!
+dim = 3;                                                 % Room dimension
+orientation = 0;                                         % Microphone orientation (rad)
+hp_filter = 1;                                           % Disable high-pass filter
 
 %% load ground-truth RIR (h) %%
+% 產生 RIR 和存.mat 檔 %
+h = rir_generator(c, fs, MicPos, SorPos, room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
+rir_filename_str = ['h\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(points_rir), '.mat'];
+rir_filemane = join(rir_filename_str, '');
+save(rir_filemane, 'h')
+
 rir_filename_str = ['h\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(points_rir), '.mat'];
 rir_filemane = join(rir_filename_str, '');
 load(rir_filemane)
@@ -64,7 +82,17 @@ y_delay_transpose = y_delay.';
 NumOfFrame = size(Y_delay, 2);
 
 %% load y_wpe (y_wpe) %%
-y_wpe_filename_str = ['y\y_wpe-', string(reverberation_time), '.mat'];
+% do wpe %
+y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
+y_wpe = y_wpe.';
+
+% 存 wpe mat %
+y_wpe_filename_str = ['y\y_wpe_', string(reverberation_time), '.mat'];
+y_wpe_filename = join(y_wpe_filename_str, '');
+save(y_wpe_filename, 'y_wpe')
+
+% load y_wpe %
+y_wpe_filename_str = ['y\y_wpe_', string(reverberation_time), '.mat'];
 y_wpe_filename = join(y_wpe_filename_str, '');
 load(y_wpe_filename);
 
@@ -178,11 +206,11 @@ shg
 
 % save A and fig %
 algorithm = 'Wiener';
-A_filename_str = ['A\A-', string(reverberation_time), 'x', algorithm, '.mat'];
+A_filename_str = ['A\A_', string(reverberation_time), 'x', algorithm, '.mat'];
 A_filename = join(A_filename_str, '');
 save(A_filename, 'A')
 
-fig_filename_str = ['fig\fig-', string(reverberation_time), 'x', algorithm, '.fig'];
+fig_filename_str = ['fig\fig_', string(reverberation_time), 'x', algorithm, '.fig'];
 fig_filename = join(fig_filename_str, '');
 savefig(fig_filename)
 
@@ -262,11 +290,11 @@ shg
 
 % save A %
 algorithm = 'RLS';
-A_filename_str = ['A\A-', string(reverberation_time), 'x', algorithm, '.mat'];
+A_filename_str = ['A\A_', string(reverberation_time), 'x', algorithm, '.mat'];
 A_filename = join(A_filename_str, '');
 save(A_filename, 'A')
 
-fig_filename_str = ['fig\fig-', string(reverberation_time), 'x', algorithm, '.fig'];
+fig_filename_str = ['fig\fig_', string(reverberation_time), 'x', algorithm, '.fig'];
 fig_filename = join(fig_filename_str, '');
 savefig(fig_filename)
 
@@ -347,11 +375,11 @@ shg
 
 % save A %
 algorithm = 'Kalman';
-A_filename_str = ['A\A-', string(reverberation_time), 'x', algorithm, '.mat'];
+A_filename_str = ['A\A_', string(reverberation_time), 'x', algorithm, '.mat'];
 A_filename = join(A_filename_str, '');
 save(A_filename, 'A')
 
-fig_filename_str = ['fig\fig-', string(reverberation_time), 'x', algorithm, '.fig'];
+fig_filename_str = ['fig\fig_', string(reverberation_time), 'x', algorithm, '.fig'];
 fig_filename = join(fig_filename_str, '');
 savefig(fig_filename)
 
@@ -371,25 +399,27 @@ source_MINT_Kalman_max  = max(abs(source_MINT_Kalman(1, point_start_save:end)));
 audiowrite('wav\source.wav', source(1, point_start_save:end), fs)
 
 ratio_y_nodelay = 0.8 / max(abs(y_nodelay(look_mic, point_start_save:end))) ;
-y_filemane_str = ['wav\y_nodelay_partial-', string(reverberation_time), '.wav'];
+y_filemane_str = ['wav\y_nodelay_partial_', string(reverberation_time), '.wav'];
 y_filemane = join(y_filemane_str, '');
 audiowrite(y_filemane, y_nodelay(look_mic, point_start_save:end)*ratio_y_nodelay, fs)
 
 ratio_y_wpe = 0.8 / max(abs(y_wpe(look_mic, point_start_save:end))) ;
-y_filemane_str = ['wav\y_wpe_partial-', string(reverberation_time), '.wav'];
+y_filemane_str = ['wav\y_wpe_partial_', string(reverberation_time), '.wav'];
 y_filemane = join(y_filemane_str, '');
 audiowrite(y_filemane, y_wpe(look_mic, point_start_save:end)*ratio_y_wpe, fs)
 
-source_MINT_filemane_str = ['wav\source_predict_partial_Wiener_MINT-', string(reverberation_time), '.wav'];
+source_MINT_filemane_str = ['wav\source_predict_partial_Wiener_MINT_', string(reverberation_time), '.wav'];
 source_MINT_filemane = join(source_MINT_filemane_str, '');
 audiowrite(source_MINT_filemane, source_MINT_Wiener(1, point_start_save:end).*(source_max/source_MINT_Wiener_max), fs)
 
-source_MINT_filemane_str = ['wav\source_predict_partial_RLS_MINT-', string(reverberation_time), '.wav'];
+source_MINT_filemane_str = ['wav\source_predict_partial_RLS_MINT_', string(reverberation_time), '.wav'];
 source_MINT_filemane = join(source_MINT_filemane_str, '');
 audiowrite(source_MINT_filemane, source_MINT_RLS(1, point_start_save:end).*(source_max/source_MINT_RLS_max), fs)
 
-source_MINT_filemane_str = ['wav\source_predict_partial_Kalman_MINT-', string(reverberation_time), '.wav'];
+source_MINT_filemane_str = ['wav\source_predict_partial_Kalman_MINT_', string(reverberation_time), '.wav'];
 source_MINT_filemane = join(source_MINT_filemane_str, '');
 audiowrite(source_MINT_filemane, source_MINT_Kalman(1, point_start_save:end).*(source_max/source_MINT_Kalman_max), fs)
 
 fprintf('done\n')
+
+toc
