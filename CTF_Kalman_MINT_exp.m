@@ -95,9 +95,9 @@ for i = 1:MicNum-1
 end
 
 % mics position with repect to reference point %
-mic_x = [ 0 ; 100 ; 100 ;   0 ;   0 ; 100 ; 100 ;   0 ]./100;
-mic_y = [ 0 ;   0 ; 100 ; 100 ;   0 ;   0 ; 100 ; 100 ]./100;
-mic_z = [ 0 ;   0 ;   0 ;   0 ; 100 ; 100 ; 100 ; 100 ]./100;
+mic_x = [ 0 ; 91.8 ; 91.8 ;    0 ;    0 ; 91.8 ; 91.8 ;    0 ]./100;
+mic_y = [ 0 ;    0 ; 90.4 ; 90.6 ;    0 ;    0 ; 90.4 ; 90.6 ]./100;
+mic_z = [ 0 ;    0 ;    0 ;    0 ; 80.4 ; 79.8 ;   80 ;   80 ]./100;
 
 micpos = [mic_x, mic_y, mic_z,];
 
@@ -113,8 +113,8 @@ invpsi = inv(psi+dia_load_psi*eye(MicNum-1));
 P = [1 0 0 0;0 1 0 0;0 0 1 0;0 0 0 -1];
 
 % find possible root %
-syms L
-theta = pinv(A.'*invpsi*A+L*P )*(A.'*invpsi*b);
+syms Z
+theta = pinv(A.'*invpsi*A+Z*P )*(A.'*invpsi*b);
 I = theta.'*P*theta;
 [num, den] = numden(I);
 poly = sym2poly(num);
