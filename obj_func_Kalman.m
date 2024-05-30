@@ -11,6 +11,6 @@ for FrameNo = start_ini_frame:ini_frame
 end
 
 error = 0;
-for FrameNo= start_ini_frame:ini_frame
-    error = error+  abs(Y_delay(n, FrameNo, look_mic) - weight'*flip(Y_DAS(n, FrameNo-L+1:FrameNo).'));
+for FrameNo = start_ini_frame:ini_frame
+    error = error + abs(Y_delay(n, FrameNo, look_mic) - weight'*flip(Y_DAS(n, FrameNo-L+1:FrameNo).'));
 end
