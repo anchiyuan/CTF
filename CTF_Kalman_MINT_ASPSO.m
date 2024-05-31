@@ -22,8 +22,8 @@ end
 SorPos = [2, 2.6, 1];                                    % source position (m)
 room_dim = [5, 6, 2.5];                                  % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-reverberation_time = 0.4;                                % Reverberation time (s)
-points_rir = 8192;                                       % Number of rir points (需比 reverberation time 還長)
+reverberation_time = 0.2;                                % Reverberation time (s)
+points_rir = 4096;                                       % Number of rir points (需比 reverberation time 還長)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mtype = 'omnidirectional';                               % Type of microphone
 order = -1;                                              % -1 equals maximum reflection order!
@@ -368,18 +368,6 @@ shg
 %% save .wav 檔 %%
 % save partial wav %
 point_start_save = 18*fs;
-
-audiowrite('wav\source_partial.wav', source(1, point_start_save:end), fs)
-
-ratio_y_nodelay = 0.8 / max(abs(y_nodelay(look_mic, point_start_save:end))) ;
-y_filemane_str = ['wav\y_nodelay_partial-', string(reverberation_time), '.wav'];
-y_filemane = join(y_filemane_str, '');
-audiowrite(y_filemane, y_nodelay(look_mic, point_start_save:end)*ratio_y_nodelay, fs)
-
-ratio_y_wpe = 0.8 / max(abs(y_wpe(look_mic, point_start_save:end))) ;
-y_filemane_str = ['wav\y_wpe_partial-', string(reverberation_time), '.wav'];
-y_filemane = join(y_filemane_str, '');
-audiowrite(y_filemane, y_wpe(look_mic, point_start_save:end)*ratio_y_wpe, fs)
 
 source_MINT_filemane_str = ['wav\source_predict_partial_Kalman_MINT_ASPSO-', string(reverberation_time), '.wav'];
 source_MINT_filemane = join(source_MINT_filemane_str, '');
