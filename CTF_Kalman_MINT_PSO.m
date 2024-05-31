@@ -228,18 +228,22 @@ parfor n =1:frequency    % 每個頻率獨立
     end    % end for while iteration
 
     % 計算最終 weight %
-    weight = zeros(L, 1);
-    K = zeros(L, 1);    % Kalman gain %
-    P = gbest_x(:, 1)*eye(L);    % error covariance matrix %
-    R = gbest_x(:, 2);    % measurement noise covariance matrix %
-    for FrameNo = start_ini_frame:ini_frame
-        % no time update only have measurement update %
-        K = P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).')*inv(conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).') + R);
-        weight = weight + K*(conj(Y_delay(n, FrameNo, look_mic)) - conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*weight);
-        P = P - K*conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P;
+    for i = 1:MicNum
+        weight = zeros(L, 1);
+        K = zeros(L, 1);    % Kalman gain %
+        P = gbest_x(:, 1)*eye(L);    % error covariance matrix %
+        R = gbest_x(:, 2);    % measurement noise covariance matrix %
+        for FrameNo = start_ini_frame:ini_frame
+            % no time update only have measurement update %
+            K = P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).')*inv(conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).') + R);
+            weight = weight + K*(conj(Y_delay(n, FrameNo, i)) - conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*weight);
+            P = P - K*conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P;
+        end
+    
+        A(i, :, n) = weight';
+    
     end
 
-    A(look_mic, :, n) = weight';
 end     % end for parfor frequency
 toc
 
@@ -287,23 +291,11 @@ source_MINT_max  = max(abs(source_MINT(1, :)));
 ratio_source_MINT = source_max/source_MINT_max;
 source_MINT = source_MINT.*ratio_source_MINT;
 
-% 畫 source_predict time plot %
-figure(3)
-plot(source(1, :), 'r');
-hold on
-plot(source_MINT(1, :), 'b');
-hold off
-title('source\_MINT')
-xlabel('points')
-ylabel('magnitude')
-legend('source', 'source\_MINT')
-shg
-
 %% save .wav 檔 %%
 % save partial wav %
 point_start_save = 18*fs;
 
-source_MINT_filemane_str = ['wav\source_predict_partial_Kalman_MINT_PSO-', string(reverberation_time), '.wav'];
+source_MINT_filemane_str = ['wav\source_predict_partial_Kalman_MINT_PSO_', string(reverberation_time), '.wav'];
 source_MINT_filemane = join(source_MINT_filemane_str, '');
 audiowrite(source_MINT_filemane, source_MINT(1, point_start_save:end), fs)
 
