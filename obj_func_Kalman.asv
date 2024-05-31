@@ -1,6 +1,5 @@
-function error = obj_func_Kalman(MicNum, L, x, start_ini_frame, ini_frame, Y_DAS, n, Y_delay)
+function error = obj_func_Kalman(MicNum, L, x, start_ini_frame, ini_frame, Y_DAS, n, Y_delay, look_mic)
 
-error = zeros(MicNum, 1);
 parfor i = 1:MicNum
     weight = zeros(L, 1);
     K = zeros(L, 1);    % Kalman gain %
@@ -13,10 +12,8 @@ parfor i = 1:MicNum
         P = P - K*conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P;
     end
     
+    error = 0;
     for FrameNo = start_ini_frame:ini_frame
-        error(i, :) = error(i, :) + abs(Y_delay(n, FrameNo, i) - weight'*flip(Y_DAS(n, FrameNo-L+1:FrameNo).'));
+        error = error + abs(Y_delay(n, FrameNo, look_mic) - weight'*flip(Y_DAS(n, FrameNo-L+1:FrameNo).'));
     end
-
 end
-
-error = mean(error);

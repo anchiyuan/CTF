@@ -109,12 +109,12 @@ y_delay_transpose = y_delay.';
 % y_wpe = y_wpe.';
 % 
 % % 存 wpe mat %
-% y_wpe_filename_str = ['y_wpe-', string(reverberation_time), '.mat'];
+% y_wpe_filename_str = ['y_wpe_', string(reverberation_time), '.mat'];
 % y_wpe_filename = join(y_wpe_filename_str, '');
 % save(y_wpe_filename, 'y_wpe')
 
 % load y_wpe %
-y_wpe_filename_str = ['y\y_wpe-', string(reverberation_time), '.mat'];
+y_wpe_filename_str = ['y\y_wpe_', string(reverberation_time), '.mat'];
 y_wpe_filename = join(y_wpe_filename_str, '');
 load(y_wpe_filename);
 
@@ -183,7 +183,7 @@ parfor n =1:frequency    % 每個頻率獨立
         % calculate fitness of particle and update pbest %
         error = zeros(particle_num, 1);
         for i = 1:particle_num
-            error(i, :) = obj_func_Kalman(L, x(i, :), start_ini_frame, ini_frame, Y_DAS, n, Y_delay, look_mic);
+            error(i, :) = obj_func_Kalman(MicNum, L, x(i, :), start_ini_frame, ini_frame, Y_DAS, n, Y_delay);
             if error(i, :) < pbest_fitness(i, :)
 			    pbest_fitness(i, :) = error(i, :);
 			    pbest_x(i,:) = x(i,:);
