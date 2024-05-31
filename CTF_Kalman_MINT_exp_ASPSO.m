@@ -311,6 +311,87 @@ while (ite <= max_ite)
     ite = ite + 1;
 end    % end for while iteration
 
+%% DAS beamformer (Y_DAS) %%
+% 算 mic 與 source 之距離 %
+distance = zeros(MicNum, SorNum);
+for i = 1 : MicNum
+    distance(i, :) =  sqrt(sum((gbest_x - micpos(i, :)).^2));
+end
+
+% 算 a %
+a = zeros(MicNum, SorNum, frequency);
+for n = 1:frequency
+    omega = 2*pi*freqs_vector(n);
+    a(:, :, n) = exp(-1j*omega/c*distance)./distance;
+end
+
+% 算 DAS weight %
+w = a/MicNum;
+
+% 算 Y_DAS %
+y_wpe_transpose = y_wpe.';
+[Y_wpe, ~, ~] = stft(y_wpe_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
+
+Y_DAS = zeros(frequency, NumOfFrame);
+for FrameNo= 1:NumOfFrame
+    for n = 1: frequency
+         Y_DAS(n, FrameNo) = w(:, :, n)'*squeeze(Y_wpe(n, FrameNo, :));
+    end  
+
+end
+
+%% predict CTF with Kalman filter (A) %%
+start_ini_frame = L;
+ini_frame = NumOfFrame;
+A = zeros(MicNum, L, frequency);
+
+% Kalman stationary filter %
+tic
+parfor i = 1:MicNum
+    for n =1:frequency
+        weight = zeros(L, 1);
+        P = 0.5*eye(L);    % error covariance matrix %
+        K = zeros(L, 1);    % Kalman gain %
+        R = 10^(-3);    % measurement noise covariance matrix %
+        for FrameNo = start_ini_frame:ini_frame
+            % no time update only have measurement update %
+            K = P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).')*inv(conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).') + R);
+            weight = weight + K*(conj(Y_delay(n, FrameNo, i)) - conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*weight);
+            P = P - K*conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P;
+        end
+    
+        A(i, :, n) = weight';
+    end
+
+end
+toc
+
+% Kalman nonstationary filter %
+% tic
+% parfor i = 1:MicNum
+%     for n =1:frequency
+%         weight = zeros(L, 1);
+%         P = 0.5*eye(L);    % error covariance matrix %
+%         K = zeros(L, 1);    % Kalman gain %
+%         Q = 10^(-4)*eye(L);    % process noise covariance matrix %
+%         R = 10^(-3);    % measurement noise covariance matrix %
+%         for FrameNo = start_ini_frame:ini_frame
+%             % time update %
+%             P = P + Q;
+% 
+%             % measurement update %
+%             K = P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).')*inv(conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).') + R);
+%             weight = weight + K*(conj(Y_delay(n, FrameNo, i)) - conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*weight);
+%             P = P - K*conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P;
+% 
+%         end
+% 
+%         A(i, :, n) = weight';
+%     end
+% 
+% end
+% toc
+
 %% A 轉回時域畫圖 (A_tdomain) %%
 A_forplot = zeros(frequency, L, MicNum);
 for i = 1 : MicNum
@@ -326,7 +407,7 @@ end
 
 A_tdomain = A_tdomain.*ratio_A_tdomain;
 
-look_mic = 1;
+look_mic = 3;
 % 畫 A_tdomain time plot
 figure(2)
 plot(tf(look_mic, :), 'r');
