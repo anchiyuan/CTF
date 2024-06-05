@@ -22,8 +22,8 @@ end
 SorPos = [2, 2.6, 1];                                    % source position (m)
 room_dim = [5, 6, 2.5];                                  % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-reverberation_time = 0.2;                                % Reverberation time (s)
-points_rir = 4096;                                       % Number of rir points (需比 reverberation time 還長)
+reverberation_time = 0.4;                                % Reverberation time (s)
+points_rir = 8192;                                       % Number of rir points (需比 reverberation time 還長)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mtype = 'omnidirectional';                               % Type of microphone
 order = -1;                                              % -1 equals maximum reflection order!
@@ -109,12 +109,12 @@ y_delay_transpose = y_delay.';
 % y_wpe = y_wpe.';
 % 
 % % 存 wpe mat %
-% y_wpe_filename_str = ['y_wpe_', string(reverberation_time), '.mat'];
+% y_wpe_filename_str = ['y_wpe-', string(reverberation_time), '.mat'];
 % y_wpe_filename = join(y_wpe_filename_str, '');
 % save(y_wpe_filename, 'y_wpe')
 
 % load y_wpe %
-y_wpe_filename_str = ['y\y_wpe_', string(reverberation_time), '.mat'];
+y_wpe_filename_str = ['y\y_wpe-', string(reverberation_time), '.mat'];
 y_wpe_filename = join(y_wpe_filename_str, '');
 load(y_wpe_filename);
 
@@ -183,7 +183,7 @@ parfor n =1:frequency    % 每個頻率獨立
         % calculate fitness of particle and update pbest %
         error = zeros(particle_num, 1);
         for i = 1:particle_num
-            error(i, :) = obj_func_Kalman(MicNum, L, x(i, :), start_ini_frame, ini_frame, Y_DAS, n, Y_delay);
+            error(i, :) = obj_func_Kalman(L, x(i, :), start_ini_frame, ini_frame, Y_DAS, n, Y_delay, look_mic);
             if error(i, :) < pbest_fitness(i, :)
 			    pbest_fitness(i, :) = error(i, :);
 			    pbest_x(i,:) = x(i,:);
@@ -228,22 +228,18 @@ parfor n =1:frequency    % 每個頻率獨立
     end    % end for while iteration
 
     % 計算最終 weight %
-    for i = 1:MicNum
-        weight = zeros(L, 1);
-        K = zeros(L, 1);    % Kalman gain %
-        P = gbest_x(:, 1)*eye(L);    % error covariance matrix %
-        R = gbest_x(:, 2);    % measurement noise covariance matrix %
-        for FrameNo = start_ini_frame:ini_frame
-            % no time update only have measurement update %
-            K = P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).')*inv(conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).') + R);
-            weight = weight + K*(conj(Y_delay(n, FrameNo, i)) - conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*weight);
-            P = P - K*conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P;
-        end
-    
-        A(i, :, n) = weight';
-    
+    weight = zeros(L, 1);
+    K = zeros(L, 1);    % Kalman gain %
+    P = gbest_x(:, 1)*eye(L);    % error covariance matrix %
+    R = gbest_x(:, 2);    % measurement noise covariance matrix %
+    for FrameNo = start_ini_frame:ini_frame
+        % no time update only have measurement update %
+        K = P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).')*inv(conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P*flip(Y_DAS(n, FrameNo-L+1:FrameNo).') + R);
+        weight = weight + K*(conj(Y_delay(n, FrameNo, look_mic)) - conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*weight);
+        P = P - K*conj(flip(Y_DAS(n, FrameNo-L+1:FrameNo)))*P;
     end
 
+    A(look_mic, :, n) = weight';
 end     % end for parfor frequency
 toc
 
@@ -291,11 +287,35 @@ source_MINT_max  = max(abs(source_MINT(1, :)));
 ratio_source_MINT = source_max/source_MINT_max;
 source_MINT = source_MINT.*ratio_source_MINT;
 
+% 畫 source_predict time plot %
+figure(3)
+plot(source(1, :), 'r');
+hold on
+plot(source_MINT(1, :), 'b');
+hold off
+title('source\_MINT')
+xlabel('points')
+ylabel('magnitude')
+legend('source', 'source\_MINT')
+shg
+
 %% save .wav 檔 %%
 % save partial wav %
 point_start_save = 18*fs;
 
-source_MINT_filemane_str = ['wav\source_predict_partial_Kalman_MINT_PSO_', string(reverberation_time), '.wav'];
+audiowrite('wav\source_partial.wav', source(1, point_start_save:end), fs)
+
+ratio_y_nodelay = 0.8 / max(abs(y_nodelay(look_mic, point_start_save:end))) ;
+y_filemane_str = ['wav\y_nodelay_partial-', string(reverberation_time), '.wav'];
+y_filemane = join(y_filemane_str, '');
+audiowrite(y_filemane, y_nodelay(look_mic, point_start_save:end)*ratio_y_nodelay, fs)
+
+ratio_y_wpe = 0.8 / max(abs(y_wpe(look_mic, point_start_save:end))) ;
+y_filemane_str = ['wav\y_wpe_partial-', string(reverberation_time), '.wav'];
+y_filemane = join(y_filemane_str, '');
+audiowrite(y_filemane, y_wpe(look_mic, point_start_save:end)*ratio_y_wpe, fs)
+
+source_MINT_filemane_str = ['wav\source_predict_partial_Kalman_MINT_PSO-', string(reverberation_time), '.wav'];
 source_MINT_filemane = join(source_MINT_filemane_str, '');
 audiowrite(source_MINT_filemane, source_MINT(1, point_start_save:end), fs)
 
