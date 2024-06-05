@@ -70,14 +70,14 @@ y_delay_transpose = y_delay.';
 [Y_delay, ~, ~] = stft(y_delay_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
 
 %% WPE (y_wpe) %%
-% % do wpe %
-% y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
-% y_wpe = y_wpe.';
-% 
-% % 存 wpe mat %
-% y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
-% y_wpe_filename = join(y_wpe_str, '');
-% save(y_wpe_filename, 'y_wpe')
+% do wpe %
+y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
+y_wpe = y_wpe.';
+
+% 存 wpe mat %
+y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
+y_wpe_filename = join(y_wpe_str, '');
+save(y_wpe_filename, 'y_wpe')
 
 % load y_wpe %
 y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
@@ -94,9 +94,9 @@ for i = 1:MicNum-1
 end
 
 % mics position with repect to reference point %
-mic_x = [ 0 ; 91.8 ; 91.8 ;    0 ;    0 ; 91.8 ; 91.8 ;    0 ]./100;
-mic_y = [ 0 ;    0 ; 90.4 ; 90.6 ;    0 ;    0 ; 90.4 ; 90.6 ]./100;
-mic_z = [ 0 ;    0 ;    0 ;    0 ; 80.4 ; 79.8 ;   80 ;   80 ]./100;
+mic_x = [ 0 ; 91.6 ; 91.6 ;    0 ;    0 ; 91.6 ; 91.6 ;    0 ]./100;
+mic_y = [ 0 ;    0 ; 90.9 ; 90.8 ;    0 ;    0 ; 90.9 ; 90.8 ]./100;
+mic_z = [ 0 ;    0 ;    0 ;    0 ; 80.4 ; 79.7 ; 80.4 ; 79.8 ]./100;
 
 micpos = [mic_x, mic_y, mic_z,];
 
@@ -141,22 +141,48 @@ else
 
 end
 
+%% Ryy %%
+% y_nodelay_transpose = y_nodelay.';
+% [Y_nodelay, ~, ~] = stft(y_nodelay_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
+% 
+% 
+% Ryy = zeros(MicNum, MicNum, frequency);
+% for FrameNo= 1:NumOfFrame
+%     for n = 1: frequency
+%          Ryy(:, :, n) = Ryy(:,:,n) + squeeze(Y_nodelay(n, FrameNo, :))*squeeze(Y_nodelay(n, FrameNo, :))';
+%     end  
+% 
+% end
+% 
+% Ryy = Ryy/NumOfFrame;
+
 %% DAS beamformer (Y_DAS) %%
 % 算 mic 與 source 之距離 %
 distance = zeros(MicNum, SorNum);
 for i = 1 : MicNum
-    distance(i, :) =  sqrt(sum((sorpos_estimation - micpos(i, :)).^2));
+    distance(i, :) =  sqrt(sum((theta(1:3, 1).' - micpos(i, :)).^2));
 end
 
-% 算 a %
+% 算 MPDR weight %
+% a = zeros(MicNum, SorNum, frequency);
+% w = zeros(MicNum, SorNum, frequency);
+% dia_load_MPDR = 10^(-4);
+% for n = 1:frequency
+%     omega = 2*pi*freqs_vector(n);
+%     a(:, :, n) = exp(-1j*omega/c*distance)./distance;
+%     w(:, :, n) = inv(Ryy(:, :, n)+eye(MicNum)*dia_load_MPDR)*a(:, :, n)/(a(:, :, n)'*inv(Ryy(:, :, n)+eye(MicNum)*dia_load_MPDR)*a(:, :, n));
+% 
+% end
+
+% DAS weight %
 a = zeros(MicNum, SorNum, frequency);
 for n = 1:frequency
     omega = 2*pi*freqs_vector(n);
     a(:, :, n) = exp(-1j*omega/c*distance)./distance;
 end
 
-% 算 DAS weight %
 w = a/MicNum;
+
 
 % 算 Y_DAS %
 y_wpe_transpose = y_wpe.';
@@ -296,14 +322,34 @@ ATF = fft(tf, points_rir, 2);
 ATF_estimated = fft(A_tdomain, points_rir, 2);
 
 figure(3)
-semilogx(linspace(0, fs/2, points_rir/2+1), abs(ATF(look_mic, 1:points_rir/2+1)), 'r');
+semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF(look_mic, 1:points_rir/2+1))), 'r');
 hold on
-semilogx(linspace(0, fs/2, points_rir/2+1), abs(ATF_estimated(look_mic, 1:points_rir/2+1)), 'b');
+semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF_estimated(look_mic, 1:points_rir/2+1))), 'b');
 hold off
 legend('tfestimate', 'CTF')
 title('ATF')
 xlabel('frequency')
-ylabel('magnitude')
+ylabel('dB')
+shg
+
+S_dB = mag2db(abs(S));
+figure(4);
+mesh(1:1:NumOfFrame, freqs_vector, S_dB)
+colorbar
+view(2)
+title('S')
+xlabel('frame')
+ylabel('frequency(Hz)')
+shg
+
+Y_DAS_dB = mag2db(abs(Y_DAS));
+figure(5);
+mesh(1:1:NumOfFrame, freqs_vector, Y_DAS_dB)
+colorbar
+view(2)
+title('DAS')
+xlabel('frame')
+ylabel('frequency(Hz)')
 shg
 
 fprintf('done\n')

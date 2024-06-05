@@ -70,14 +70,14 @@ y_delay_transpose = y_delay.';
 [Y_delay, ~, ~] = stft(y_delay_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
 
 %% WPE (y_wpe) %%
-% % do wpe %
-% y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
-% y_wpe = y_wpe.';
-% 
-% % 存 wpe mat %
-% y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
-% y_wpe_filename = join(y_wpe_str, '');
-% save(y_wpe_filename, 'y_wpe')
+% do wpe %
+y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
+y_wpe = y_wpe.';
+
+% 存 wpe mat %
+y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
+y_wpe_filename = join(y_wpe_str, '');
+save(y_wpe_filename, 'y_wpe')
 
 % load y_wpe %
 y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
@@ -94,9 +94,9 @@ for i = 1:MicNum-1
 end
 
 % mics position with repect to reference point %
-mic_x = [ 0 ; 91.8 ; 91.8 ;    0 ;    0 ; 91.8 ; 91.8 ;    0 ]./100;
-mic_y = [ 0 ;    0 ; 90.4 ; 90.6 ;    0 ;    0 ; 90.4 ; 90.6 ]./100;
-mic_z = [ 0 ;    0 ;    0 ;    0 ; 80.4 ; 79.8 ;   80 ;   80 ]./100;
+mic_x = [ 0 ; 91.6 ; 91.6 ;    0 ;    0 ; 91.6 ; 91.6 ;    0 ]./100;
+mic_y = [ 0 ;    0 ; 90.9 ; 90.8 ;    0 ;    0 ; 90.9 ; 90.8 ]./100;
+mic_z = [ 0 ;    0 ;    0 ;    0 ; 80.4 ; 79.7 ; 80.4 ; 79.8 ]./100;
 
 micpos = [mic_x, mic_y, mic_z,];
 
@@ -189,21 +189,21 @@ stopping_threshold = 10;    % 觸發 stopping 的 threshold %
 
 % parameter for inertia weight %
 x_inertia = 0.4;
-A_inertia = 4;
+A_inertia = 6;
 max_inertia = 0.9;
 min_inertia = 0.4;
 
 % parameter for updating velocity %
-c1 = 2;
-c2 = 2;
-vmax = 5;    % 使 velocity 的絕對值小於 vmax %
+c1 = 1;
+c2 = 1;
+vmax = 3;    % 使 velocity 的絕對值小於 vmax %
 
 % parameter for adaptive position update strategy %
 b = 0.3;
 
 % randomly initialize particle locations and velocities %
 v = 2*rand(particle_num, particle_dim);    % 粒子飛行速度
-x = [sorpos_estimation(:, 1)+0.2*(rand(particle_num, 1)*2-1), sorpos_estimation(:, 2)+0.2*(rand(particle_num, 1)*2-1), sorpos_estimation(:, 3)+0.2*(rand(particle_num, 1)*2-1)];    % 粒子所在位置
+x = [theta(1, 1)+0.2*(rand(particle_num, 1)*2-1), theta(2, 1)+0.2*(rand(particle_num, 1)*2-1), theta(3, 1)+0.2*(rand(particle_num, 1)*2-1)];    % 粒子所在位置
 pbest_x = x;
 pbest_fitness = 10^(5)*ones(particle_num, 1);    % 先設一個很大的值則第一次迭代時會直接更新
 
