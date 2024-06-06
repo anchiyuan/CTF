@@ -10,7 +10,8 @@ c = 343;
 Fs = 48000;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fs = 16000;           % 欲 resample 成的取樣頻率
-MicNum = 8;           % 實驗麥克風數量
+MicNum_TDOA = 8;      % TDOA麥克風數量
+MicNum = 6;           % UL麥克風數量
 points_rir = 2048;    % 自行設定想要輸出的 RIR 長度
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -47,17 +48,28 @@ source = resample(source, 1, Fs/fs);
 NumOfFrame = size(S, 2);
 
 %% read mic 音檔再做 stft (y_nodelay, y_delay and Y_delay) %%
+% load y_TDOA %
+y_TDOA = zeros(MicNum_TDOA, SorLen);
+for i = 1:MicNum_TDOA
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    y_TDOA_str = ['wav_exp\', string(i), '.wav'];
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    y_TDOA_filename = join(y_TDOA_str, '');
+    [y_TDOA(i, :), ~] = audioread(y_TDOA_filename, [1, SorLen]);
+end
+
 % load y_nodelay %
 y_nodelay = zeros(MicNum, SorLen);
 for i = 1:MicNum
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    y_nodelay_str = ['wav_exp\', string(i), '.wav'];
+    y_nodelay_str = ['wav_exp\', string(i+MicNum_TDOA), '.wav'];
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     y_nodelay_filename = join(y_nodelay_str, '');
     [y_nodelay(i, :), ~] = audioread( y_nodelay_filename, [1, SorLen]);
 end
 
 % resample %
+y_TDOA = resample(y_TDOA, 1, Fs/fs, Dimension=2);
 y_nodelay = resample(y_nodelay, 1, Fs/fs, Dimension=2);
 
 % delay y_nodelay to get y_delay %
@@ -86,18 +98,19 @@ load(y_wpe_filename);
 
 %% TDOA localization %%
 % GCC-PHAT for delay estimation %
-delay = zeros(MicNum-1, 1);
-difference = zeros(MicNum-1, 1);
-for i = 1:MicNum-1
-    delay(i, :) = gccphat(y_nodelay(i+1,:).', y_nodelay(1,:).', fs);
+delay = zeros(MicNum_TDOA-1, 1);
+difference = zeros(MicNum_TDOA-1, 1);
+for i = 1:MicNum_TDOA-1
+    delay(i, :) = gccphat(y_TDOA(i+1,:).', y_TDOA(1,:).', fs);
     difference(i, :) = delay(i, :)*c;
 end
 
 % mics position with repect to reference point %
-mic_x = [ 0 ; 91.6 ; 91.6 ;    0 ;    0 ; 91.6 ; 91.6 ;    0 ]./100;
-mic_y = [ 0 ;    0 ; 90.9 ; 90.8 ;    0 ;    0 ; 90.9 ; 90.8 ]./100;
-mic_z = [ 0 ;    0 ;    0 ;    0 ; 80.4 ; 79.7 ; 80.4 ; 79.8 ]./100;
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+mic_x = [ 0 ;   92 ;   92 ;    0 ;    0 ;   92 ;   92 ;    0 ]./100;
+mic_y = [ 0 ;    0 ; 90.8 ;   90 ;    0 ;    0 ; 90.8 ;   90 ]./100;
+mic_z = [ 0 ;    0 ;    0 ;    0 ; 80.1 ;   80 ; 80.4 ; 79.9 ]./100;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 micpos = [mic_x, mic_y, mic_z,];
 
 % generate parameters matrix %
@@ -106,9 +119,9 @@ b = micpos(2:end, 1).^2 + micpos(2:end, 2).^2 + micpos(2:end, 3).^2 - difference
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 sigma = 0.01;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-psi = 4*sigma^2*(ones(MicNum-1, 1)*ones(MicNum-1, 1).' + eye(MicNum-1))*difference*difference.';
+psi = 4*sigma^2*(ones(MicNum_TDOA-1, 1)*ones(MicNum_TDOA-1, 1).' + eye(MicNum_TDOA-1))*difference*difference.';
 dia_load_psi = 1;
-invpsi = inv(psi+dia_load_psi*eye(MicNum-1)); 
+invpsi = inv(psi+dia_load_psi*eye(MicNum_TDOA-1)); 
 P = [1 0 0 0;0 1 0 0;0 0 1 0;0 0 0 -1];
 
 % find possible root %
@@ -141,6 +154,8 @@ else
 
 end
 
+
+
 %% Ryy %%
 % y_nodelay_transpose = y_nodelay.';
 % [Y_nodelay, ~, ~] = stft(y_nodelay_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
@@ -156,11 +171,20 @@ end
 % 
 % Ryy = Ryy/NumOfFrame;
 
-%% DAS beamformer (Y_DAS) %%
+%% DAS or MPDR beamformer (Y_DAS) %%
 % 算 mic 與 source 之距離 %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+MicStart = [0.076, -0.602, 0];
+spacing = 0.07;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ULA_pos = zeros(MicNum, 3);
+for i = 1:MicNum
+    ULA_pos(i, :) = [MicStart(1, 1)+(i-1)*spacing, MicStart(1, 2), MicStart(1, 3)];
+end
+ 
 distance = zeros(MicNum, SorNum);
 for i = 1 : MicNum
-    distance(i, :) =  sqrt(sum((theta(1:3, 1).' - micpos(i, :)).^2));
+    distance(i, :) =  sqrt(sum((sorpos_estimation - ULA_pos(i, :)).^2));
 end
 
 % 算 MPDR weight %
@@ -317,7 +341,7 @@ end
 [~, argmax_tf] = max(abs(tf.'));
 [~, argmax_A_tdomain] = max(abs(A_tdomain.'));
 
-%% 檢查 ATF 有無 match %%
+%% 畫圖檢查 ATF 有無 match %%
 ATF = fft(tf, points_rir, 2);
 ATF_estimated = fft(A_tdomain, points_rir, 2);
 
@@ -332,6 +356,7 @@ xlabel('frequency')
 ylabel('dB')
 shg
 
+%% 畫圖檢查 S 和 Y_DAS 有無 match %%
 S_dB = mag2db(abs(S));
 figure(4);
 mesh(1:1:NumOfFrame, freqs_vector, S_dB)
