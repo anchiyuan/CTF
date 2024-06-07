@@ -379,7 +379,7 @@ figure(3)
 semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF_space(look_mic, 1:points_rir/2+1))), 'r');
 hold on
 semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF_estimated(look_mic, 1:points_rir/2+1))), 'b');
-hold off
+hold on
 semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF_system(look_mic, 1:points_rir/2+1))), 'k');
 hold on
 semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF_speaker(:, 1:points_rir/2+1))), 'g');
