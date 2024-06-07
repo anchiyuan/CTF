@@ -34,16 +34,25 @@ sorLen =  Second*fs;
 
 % load source %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-[source_transpose, ~] = audioread('wav_exp\white_noise_30s.wav', [1, SorLen]);    % speech source
+[source_transpose, ~] = audioread('wav_exp\white_noise_30s.wav', [1, SorLen]);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 source = source_transpose.';
 
 % resample %
 source = resample(source, 1, Fs/fs);
 
+% load source %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+[speaker_transpose, ~] = audioread('wav_exp\14.wav', [1, SorLen]);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+speaker = speaker_transpose.';
+
+% resample %
+speaker = resample(speaker, 1, Fs/fs);
+
 %% source 做 stft (S) %%
 [S, ~, ~] = stft(source.', fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
-
+[SPEAKER, ~, ~] = stft(speaker.', fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
 NumOfFrame = size(S, 2);
 
 %% read mic 音檔再做 stft (y_nodelay, y_delay and  Y_nodelay Y_delay) %%
@@ -98,9 +107,9 @@ end
 
 % mics position with repect to reference point %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-mic_x = [ 0 ;   92 ;   92 ;    0 ;    0 ;   92 ;   92 ;    0 ]./100;
-mic_y = [ 0 ;    0 ; 90.8 ;   90 ;    0 ;    0 ; 90.8 ;   90 ]./100;
-mic_z = [ 0 ;    0 ;    0 ;    0 ; 80.1 ;   80 ; 80.4 ; 79.9 ]./100;
+mic_x = [ 0 ; 92.2 ; 92.2 ;    0 ;    0 ; 92.2 ; 92.2 ;    0 ]./100;
+mic_y = [ 0 ;    0 ;   89 ; 90.2 ;    0 ;    0 ;   89 ; 90.2 ]./100;
+mic_z = [ 0 ;    0 ;    0 ;    0 ; 80.2 ; 80.2 ; 80.2 ;   80 ]./100;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 micpos = [mic_x, mic_y, mic_z,];
 
@@ -257,17 +266,27 @@ toc
 % toc
 
 %% TF estimate (tf and t60) %%
+TF =  tfestimate(source, speaker, hamming(points_rir), points_rir*0.75, points_rir);
+TF = TF.';
+TF = [TF flip(conj(TF(:, 2:end-1)))];
+tf_speaker = ifft(TF, points_rir, 2,'symmetric');
+
+TF =  tfestimate(speaker, y_nodelay.', hamming(points_rir), points_rir*0.75, points_rir);
+TF = TF.';
+TF = [TF flip(conj(TF(:, 2:end-1)))];
+tf_space = ifft(TF, points_rir, 2,'symmetric');
+
 TF =  tfestimate(source, y_nodelay.', hamming(points_rir), points_rir*0.75, points_rir);
 TF = TF.';
 TF = [TF flip(conj(TF(:, 2:end-1)))];
-tf = ifft(TF, points_rir, 2,'symmetric');
+tf_system = ifft(TF, points_rir, 2,'symmetric');
 
-e_total = sum(tf.^2, 2);
+e_total = sum(tf_space.^2, 2);
 t60 = zeros(MicNum, 1);
 for i = 1:MicNum
     edc = zeros(points_rir, 1);
     for j = 1:points_rir
-        edc(j, :) = 10*log10(sum(tf(i, j:end).^2)/e_total(i, :));
+        edc(j, :) = 10*log10(sum(tf_space(i, j:end).^2)/e_total(i, :));
     end
     
     edc = edc + 60;
@@ -277,8 +296,8 @@ end
 
 look_mic = 1;
 figure(1)
-plot(tf(look_mic, :));
-title('tfestimate')
+plot(tf_space(look_mic, :));
+title('ground-truth RIR')
 xlabel('points')
 ylabel('amplitude')
 shg
@@ -293,7 +312,7 @@ A_tdomain = reconstruct_RIR_normalwindow(points_rir, NFFT, hopsize, L, win, fs, 
 A_tdomain = A_tdomain(:, hopsize*(osfac-1)+1:end);
 ratio_A_tdomain = zeros(MicNum, 1);
 for i = 1:MicNum
-    ratio_A_tdomain(i, :) = max(abs(tf(i, :)))/max(abs(A_tdomain(i, :)));
+    ratio_A_tdomain(i, :) = max(abs(tf_space(i, :)))/max(abs(A_tdomain(i, :)));
 end
 
 A_tdomain = A_tdomain.*ratio_A_tdomain;
@@ -301,40 +320,48 @@ A_tdomain = A_tdomain.*ratio_A_tdomain;
 look_mic = 1;
 % 畫 A_tdomain time plot
 figure(2)
-plot(tf(look_mic, :), 'r');
+plot(tf_space(look_mic, :), 'r');
 hold on
 plot(A_tdomain(look_mic, :), 'b');
 hold off
-legend('tfestimate', 'CTF')
+legend('ground-truth RIR', 'estimated RIR')
 title('RIR')
 xlabel('points')
 ylabel('amplitude')
 shg
 
 %% 算 NRMSPM %%
-tf_NRMSPM = reshape(tf.', [MicNum*points_rir 1]);
+tf_NRMSPM = reshape(tf_space.', [MicNum*points_rir 1]);
 A_tdomain_NRMSPM = reshape(A_tdomain.', [MicNum*points_rir 1]);
 NRMSPM = 20*log10(norm(tf_NRMSPM-tf_NRMSPM.'*A_tdomain_NRMSPM/(A_tdomain_NRMSPM.'*A_tdomain_NRMSPM)*A_tdomain_NRMSPM)/norm(tf_NRMSPM));
 
 NRMSPM_in = zeros(MicNum, 1);
 for i = 1:MicNum
-    NRMSPM_in(i, :) = 20*log10(norm(tf(i, :).'-tf(i, :)*A_tdomain(i, :).'/(A_tdomain(i, :)*A_tdomain(i, :).')*A_tdomain(i, :).')/norm(tf(i, :).'));
+    NRMSPM_in(i, :) = 20*log10(norm(tf_space(i, :).'-tf_space(i, :)*A_tdomain(i, :).'/(A_tdomain(i, :)*A_tdomain(i, :).')*A_tdomain(i, :).')/norm(tf_space(i, :).'));
 end
 
 %% 檢查 direct sound 有無 match %%
-[~, argmax_tf] = max(abs(tf.'));
+[~, argmax_tf] = max(abs(tf_space.'));
 [~, argmax_A_tdomain] = max(abs(A_tdomain.'));
 
 %% 畫圖檢查 ATF 有無 match %%
-ATF = fft(tf, points_rir, 2);
+ATF_speaker = fft(tf_speaker, points_rir, 2);
+ATF_space= fft(tf_space, points_rir, 2);
+ATF_system = fft(tf_system, points_rir, 2);
 ATF_estimated = fft(A_tdomain, points_rir, 2);
 
 figure(3)
-semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF(look_mic, 1:points_rir/2+1))), 'r');
+semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF_space(look_mic, 1:points_rir/2+1))), 'r');
 hold on
 semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF_estimated(look_mic, 1:points_rir/2+1))), 'b');
+hold on
+semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF_system(look_mic, 1:points_rir/2+1))), 'k');
+hold on
+semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF_speaker(:, 1:points_rir/2+1))), 'g');
+hold on
+semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF_system(look_mic, 1:points_rir/2+1)))-20*log10(abs(ATF_estimated(look_mic, 1:points_rir/2+1))), 'y');
 hold off
-legend('tfestimate', 'CTF')
+legend('space', 'estimated', 'system', 'speaker', 'estimated speaker')
 title('ATF')
 xlabel('frequency')
 ylabel('dB')
@@ -349,26 +376,40 @@ view(2)
 title('S')
 xlabel('frame')
 ylabel('frequency(Hz)')
+clim([-100 30])
+shg
+
+SPEAKER_dB = mag2db(abs(SPEAKER));
+figure(5);
+mesh(1:1:NumOfFrame, freqs_vector, SPEAKER_dB)
+colorbar
+view(2)
+title('SPEAKER')
+xlabel('frame')
+ylabel('frequency(Hz)')
+clim([-100 30])
 shg
 
 Y_DAS_dB = mag2db(abs(Y_DAS));
-figure(5);
+figure(6);
 mesh(1:1:NumOfFrame, freqs_vector, Y_DAS_dB)
 colorbar
 view(2)
 title('DAS')
 xlabel('frame')
 ylabel('frequency(Hz)')
+clim([-100 30])
 shg
 
 Y_nodelay_dB = mag2db(abs(Y_nodelay(:, :, 1)));
-figure(6);
+figure(7);
 mesh(1:1:NumOfFrame, freqs_vector, Y_nodelay_dB)
 colorbar
 view(2)
 title('Y')
 xlabel('frame')
 ylabel('frequency(Hz)')
+clim([-100 30])
 shg
 
 fprintf('done\n')
