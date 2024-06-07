@@ -46,7 +46,7 @@ source = resample(source, 1, Fs/fs);
 
 NumOfFrame = size(S, 2);
 
-%% read mic 音檔再做 stft (y_nodelay, y_delay and Y_delay) %%
+%% read mic 音檔再做 stft (y_nodelay, y_delay and  Y_nodelay Y_delay) %%
 % load y_nodelay %
 y_nodelay = zeros(MicNum, SorLen);
 for i = 1:MicNum
@@ -65,13 +65,12 @@ extra_delay_y = (ceil(NFFT/hopsize) - 1)*hopsize;    % put delay for equilizatio
 y_delay = zeros(MicNum, sorLen);
 y_delay(:, extra_delay_y+1:end) = y_nodelay(:, 1:sorLen-extra_delay_y);
 
-% y_delay 轉頻域 to get Y_delay %
-y_delay_transpose = y_delay.';
-[Y_delay, ~, ~] = stft(y_delay_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
-
+% y_nodelay 和 y_delay 轉頻域 %
 y_nodelay_transpose = y_nodelay.';
 [Y_nodelay, ~, ~] = stft(y_nodelay_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
 
+y_delay_transpose = y_delay.';
+[Y_delay, ~, ~] = stft(y_delay_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
 
 %% WPE (y_wpe) %%
 % do wpe %
@@ -98,10 +97,11 @@ for i = 1:MicNum-1
 end
 
 % mics position with repect to reference point %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mic_x = [ 0 ;   92 ;   92 ;    0 ;    0 ;   92 ;   92 ;    0 ]./100;
 mic_y = [ 0 ;    0 ; 90.8 ;   90 ;    0 ;    0 ; 90.8 ;   90 ]./100;
 mic_z = [ 0 ;    0 ;    0 ;    0 ; 80.1 ;   80 ; 80.4 ; 79.9 ]./100;
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 micpos = [mic_x, mic_y, mic_z,];
 
 % generate parameters matrix %
@@ -138,14 +138,12 @@ if size(roots_real, 1) > 1
 
     [~, min_index] = min(costfun);
     sorpos_estimation = theta(1:3, min_index).';
-
 else
     theta = pinv(A.'*invpsi*A+roots_real*P )*(A.'*invpsi*b);
     sorpos_estimation = theta(1:3, :).';
-
 end
 
-%% Ryy %%
+%% generate Ryy %%
 % y_nodelay_transpose = y_nodelay.';
 % [Y_nodelay, ~, ~] = stft(y_nodelay_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
 % 
@@ -160,25 +158,18 @@ end
 % 
 % Ryy = Ryy/NumOfFrame;
 
-%% DAS beamformer (Y_DAS) %%
+%% DAS or MPDR beamformer (Y_DAS or Y_MPDR) %%
 % 算 mic 與 source 之距離 %
 distance = zeros(MicNum, SorNum);
 for i = 1 : MicNum
     distance(i, :) =  sqrt(sum((sorpos_estimation - micpos(i, :)).^2));
 end
 
-% 算 MPDR weight %
-% a = zeros(MicNum, SorNum, frequency);
-% w = zeros(MicNum, SorNum, frequency);
-% dia_load_MPDR = 10^(-4);
-% for n = 1:frequency
-%     omega = 2*pi*freqs_vector(n);
-%     a(:, :, n) = exp(-1j*omega/c*distance)./distance;
-%     w(:, :, n) = inv(Ryy(:, :, n)+eye(MicNum)*dia_load_MPDR)*a(:, :, n)/(a(:, :, n)'*inv(Ryy(:, :, n)+eye(MicNum)*dia_load_MPDR)*a(:, :, n));
-% 
-% end
+% y_wpe 轉頻域得到 Y_wpe %
+y_wpe_transpose = y_wpe.';
+[Y_wpe, ~, ~] = stft(y_wpe_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
 
-% DAS weight %
+% DAS beamformer %
 a = zeros(MicNum, SorNum, frequency);
 for n = 1:frequency
     omega = 2*pi*freqs_vector(n);
@@ -187,11 +178,6 @@ end
 
 w = a/MicNum;
 
-
-% 算 Y_DAS %
-y_wpe_transpose = y_wpe.';
-[Y_wpe, ~, ~] = stft(y_wpe_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
-
 Y_DAS = zeros(frequency, NumOfFrame);
 for FrameNo= 1:NumOfFrame
     for n = 1: frequency
@@ -199,6 +185,24 @@ for FrameNo= 1:NumOfFrame
     end  
 
 end
+
+% % MPDR beamformer %
+% a = zeros(MicNum, SorNum, frequency);
+% w = zeros(MicNum, SorNum, frequency);
+% dia_load_MPDR = 10^(-4);
+% for n = 1:frequency
+%     omega = 2*pi*freqs_vector(n);
+%     a(:, :, n) = exp(-1j*omega/c*distance)./distance;
+%     w(:, :, n) = inv(Ryy(:, :, n)+eye(MicNum)*dia_load_MPDR)*a(:, :, n)/(a(:, :, n)'*inv(Ryy(:, :, n)+eye(MicNum)*dia_load_MPDR)*a(:, :, n));
+% end
+% 
+% Y_MPDR = zeros(frequency, NumOfFrame);
+% for FrameNo= 1:NumOfFrame
+%     for n = 1: frequency
+%          Y_MPDR(n, FrameNo) = w(:, :, n)'*squeeze(Y_wpe(n, FrameNo, :));
+%     end  
+% 
+% end
 
 %% predict CTF with Kalman filter (A) %%
 start_ini_frame = L;
@@ -321,7 +325,7 @@ end
 [~, argmax_tf] = max(abs(tf.'));
 [~, argmax_A_tdomain] = max(abs(A_tdomain.'));
 
-%% 檢查 ATF 有無 match %%
+%% 畫圖檢查 ATF 有無 match %%
 ATF = fft(tf, points_rir, 2);
 ATF_estimated = fft(A_tdomain, points_rir, 2);
 
@@ -336,6 +340,7 @@ xlabel('frequency')
 ylabel('dB')
 shg
 
+%% 畫圖檢查 S 和 Y_DAS 有無 match %%
 S_dB = mag2db(abs(S));
 figure(4);
 mesh(1:1:NumOfFrame, freqs_vector, S_dB)
@@ -365,6 +370,5 @@ title('Y')
 xlabel('frame')
 ylabel('frequency(Hz)')
 shg
-
 
 fprintf('done\n')
