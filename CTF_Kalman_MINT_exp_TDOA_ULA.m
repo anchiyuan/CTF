@@ -95,18 +95,18 @@ y_delay_transpose = y_delay.';
 
 %% WPE (y_wpe) %%
 % do wpe %
-y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
-y_wpe = y_wpe.';
-
-% 存 wpe mat %
-y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
-y_wpe_filename = join(y_wpe_str, '');
-save(y_wpe_filename, 'y_wpe')
-
-% load y_wpe %
-y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
-y_wpe_filename = join(y_wpe_str, '');
-load(y_wpe_filename);
+% y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
+% y_wpe = y_wpe.';
+% 
+% % 存 wpe mat %
+% y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
+% y_wpe_filename = join(y_wpe_str, '');
+% save(y_wpe_filename, 'y_wpe')
+% 
+% % load y_wpe %
+% y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
+% y_wpe_filename = join(y_wpe_str, '');
+% load(y_wpe_filename);
 
 %% TDOA localization %%
 % GCC-PHAT for delay estimation %
@@ -182,7 +182,7 @@ end
 %% DAS or MPDR beamformer (Y_DAS or Y_MPDR) %%
 % 算 mic 與 source 之距離 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-MicStart = [0.064, 0, 0.012];
+MicStart = [0.064, 0, 0.01];
 spacing = 0.07;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ULA_pos = zeros(MicNum-MicNum_TDOA, 3);
