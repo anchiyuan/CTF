@@ -12,6 +12,7 @@ Fs = 48000;
 fs = 16000;           % 欲 resample 成的取樣頻率
 MicNum = 8;           % 實驗麥克風數量
 points_rir = 2048;    % 自行設定想要輸出的 RIR 長度
+date = '0613';
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% window parameter %%
@@ -34,8 +35,10 @@ sorLen =  Second*fs;
 
 % load source %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-[source_transpose, ~] = audioread('wav_exp\white_noise_30s.wav', [1, SorLen]);
+source_str = ['wav_exp\', date,'\white_noise_30s.wav'];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+source_filename = join(source_str, '');
+[source_transpose, ~] = audioread(source_filename, [1, SorLen]);
 source = source_transpose.';
 
 % resample %
@@ -43,8 +46,10 @@ source = resample(source, 1, Fs/fs);
 
 % load source %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-[speaker_transpose, ~] = audioread('wav_exp\14.wav', [1, SorLen]);
+speaker_str = ['wav_exp\', date,'\14.wav'];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+speaker_filename = join(speaker_str, '');
+[speaker_transpose, ~] = audioread(speaker_filename, [1, SorLen]);
 speaker = speaker_transpose.';
 
 % resample %
@@ -60,7 +65,7 @@ NumOfFrame = size(S, 2);
 y_nodelay = zeros(MicNum, SorLen);
 for i = 1:MicNum
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    y_nodelay_str = ['wav_exp\', string(i), '.wav'];
+    y_nodelay_str = ['wav_exp\', date,'\', string(i), '.wav'];
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     y_nodelay_filename = join(y_nodelay_str, '');
     [y_nodelay(i, :), ~] = audioread( y_nodelay_filename, [1, SorLen]);
@@ -83,16 +88,16 @@ y_delay_transpose = y_delay.';
 
 %% WPE (y_wpe) %%
 % do wpe %
-y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
+y_wpe = wpe(y_nodelay.', 'wpe_parameter_TDOA.m');
 y_wpe = y_wpe.';
 
 % 存 wpe mat %
-y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
+y_wpe_str = ['y_exp\y_wpe_', date, '_TDOA.mat'];
 y_wpe_filename = join(y_wpe_str, '');
 save(y_wpe_filename, 'y_wpe')
 
 % load y_wpe %
-y_wpe_str = ['y_exp\y_wpe_', string(fs),'.mat'];
+y_wpe_str = ['y_exp\y_wpe_', date, '_TDOA.mat'];
 y_wpe_filename = join(y_wpe_str, '');
 load(y_wpe_filename);
 
@@ -108,8 +113,8 @@ end
 % mics position with repect to reference point %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mic_x = [ 0 ; 92.2 ; 92.2 ;    0 ;    0 ; 92.2 ; 92.2 ;    0 ]./100;
-mic_y = [ 0 ;    0 ;   89 ; 90.2 ;    0 ;    0 ;   89 ; 90.2 ]./100;
-mic_z = [ 0 ;    0 ;    0 ;    0 ; 80.2 ; 80.2 ; 80.2 ;   80 ]./100;
+mic_y = [ 0 ;    0 ;   89 ; 89.8 ;    0 ;    0 ;   89 ; 89.8 ]./100;
+mic_z = [ 0 ;    0 ;    0 ;    0 ; 80.2 ; 80.4 ; 80.2 ; 79.7 ]./100;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 micpos = [mic_x, mic_y, mic_z,];
 
@@ -411,5 +416,27 @@ xlabel('frame')
 ylabel('frequency(Hz)')
 clim([-100 30])
 shg
+
+%% ATF magnitude and phase plot %%
+figure(8)
+subplot(2, 1, 1);
+semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF_space(look_mic, 1:points_rir/2+1))), 'r');
+hold on
+semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF_estimated(look_mic, 1:points_rir/2+1))), 'b');
+hold off
+xlim([200 8000])
+legend('ground-truth ATF', 'estimated ATF')
+xlabel('frequency (Hz)')
+ylabel('dB')
+
+subplot(2, 1, 2);
+semilogx(linspace(0, fs/2, points_rir/2+1), unwrap(angle(ATF_space(look_mic, 1:points_rir/2+1))), 'r');
+hold on
+semilogx(linspace(0, fs/2, points_rir/2+1), unwrap(angle(ATF_estimated(look_mic, 1:points_rir/2+1))), 'b');
+hold off
+xlim([200 8000])
+legend('ground-truth ATF', 'estimated ATF')
+xlabel('frequency (Hz)')
+ylabel('phase (radius)')
 
 fprintf('done\n')
