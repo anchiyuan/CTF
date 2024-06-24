@@ -162,14 +162,25 @@ y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
 y_wpe = y_wpe.';
 
 % 存 wpe mat %
-y_wpe_filename_str = ['y\y_wpe_', string(reverberation_time), '.mat'];
-y_wpe_filename = join(y_wpe_filename_str, '');
-save(y_wpe_filename, 'y_wpe')
+y_wpe_1 = y_wpe(1:MicNum_TDOA, :);
+y_wpe_2 = y_wpe(MicNum_TDOA+1:end, :);
+y_wpe_filename_str_1 = ['y\y_wpe_', string(reverberation_time), '_1.mat'];
+y_wpe_filename_str_2 = ['y\y_wpe_', string(reverberation_time), '_2.mat'];
+y_wpe_filename_1 = join(y_wpe_filename_str_1, '');
+y_wpe_filename_2 = join(y_wpe_filename_str_2, '');
+save(y_wpe_filename_1, 'y_wpe_1')
+save(y_wpe_filename_2, 'y_wpe_2')
 
 % load y_wpe %
-y_wpe_filename_str = ['y\y_wpe_', string(reverberation_time), '.mat'];
-y_wpe_filename = join(y_wpe_filename_str, '');
-load(y_wpe_filename);
+y_wpe_1 = y_wpe(1:MicNum_TDOA, :);
+y_wpe_2 = y_wpe(MicNum_TDOA+1:end, :);
+y_wpe_filename_str_1 = ['y\y_wpe_', string(reverberation_time), '_1.mat'];
+y_wpe_filename_str_2 = ['y\y_wpe_', string(reverberation_time), '_2.mat'];
+y_wpe_filename_1 = join(y_wpe_filename_str_1, '');
+y_wpe_filename_2 = join(y_wpe_filename_str_2, '');
+load(y_wpe_filename_1)
+load(y_wpe_filename_2)
+y_wpe = [y_wpe_1; y_wpe_2];
 
 %% DAS beamformer (Y_DAS) %%
 % 算 mic 與 source 之距離 %
