@@ -16,7 +16,7 @@ fs = 16000;                                              % Sample frequency (sam
 % mic_y = [ 100 ; 100 ; 400 ; 400 ; 100 ; 100 ; 400 ; 400 ; 250 ]./100;
 % mic_z = [ 50  ;  50 ;  50 ;  50 ; 200 ; 200 ; 200 ; 200 ; 200 ]./100;
 
-% 9 mics 小間距 %
+% 8 mics 小間距 %
 mic_x = [ 200 ; 300 ; 300 ; 200 ; 200 ; 300 ; 300 ; 200 ]./100;
 mic_y = [ 200 ; 200 ; 300 ; 300 ; 200 ; 200 ; 300 ; 300 ]./100;
 mic_z = [ 100 ; 100 ; 100 ; 100 ; 200 ; 200 ; 200 ; 200 ]./100;
@@ -31,8 +31,8 @@ MicPos = [mic_x, mic_y, mic_z,];
 SorPos = [270, 250, 180]/100;                                    % source position (m)
 room_dim = [5, 6, 2.5];                                  % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-reverberation_time = 0.2;                                % Reverberation time (s)
-points_rir = 2048;                                       % Number of rir points (需比 reverberation time 還長)
+reverberation_time = 1.6;                                % Reverberation time (s)
+points_rir = 32768;                                       % Number of rir points (需比 reverberation time 還長)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mtype = 'omnidirectional';                               % Type of microphone
 order = -1;                                              % -1 equals maximum reflection order!
@@ -71,10 +71,10 @@ sorpos_groundtruth = SorPos - referencce_point;
 
 %% generate ground-truth RIR (h) %%
 % 產生 RIR 和存.mat 檔 %
-h = rir_generator(c, fs, MicPos, SorPos, room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
-rir_filename_str = ['h\h_for_localization_', string(reverberation_time), 'x', string(MicNum), 'x', string(points_rir), '.mat'];
-rir_filemane = join(rir_filename_str, '');
-save(rir_filemane, 'h')
+% h = rir_generator(c, fs, MicPos, SorPos, room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
+% rir_filename_str = ['h\h_for_localization_', string(reverberation_time), 'x', string(MicNum), 'x', string(points_rir), '.mat'];
+% rir_filemane = join(rir_filename_str, '');
+% save(rir_filemane, 'h')
 
 % load RIR 的 .mat 檔 %
 rir_filename_str = ['h\h_for_localization_', string(reverberation_time), 'x', string(MicNum), 'x', string(points_rir), '.mat'];

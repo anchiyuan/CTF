@@ -8,24 +8,29 @@ tic
 
 %% RIR parameter %%
 SorNum = 1;                                              % source number
-MicNum = 30;                                             % number of microphone
+MicNum_TDOA = 8;                                         % TDOA麥克風數量
+MicNum = 38;                                             % number of microphone
 c = 343;                                                 % Sound velocity (m/s)
 fs = 16000;                                              % Sample frequency (samples/s)
-Ts = 1/fs;                                               % Sample period (s)
 
-% ULA %
-MicStart = [1, 1.5, 1];
+% distributed 8 mic %
+mic_x = [ 200 ; 300 ; 300 ; 200 ; 200 ; 300 ; 300 ; 200 ]./100;
+mic_y = [ 200 ; 200 ; 300 ; 300 ; 200 ; 200 ; 300 ; 300 ]./100;
+mic_z = [ 100 ; 100 ; 100 ; 100 ; 200 ; 200 ; 200 ; 200 ]./100;
+MicPos = [mic_x, mic_y, mic_z,];
+
+% ULA 30 mics %
+MicStart = [210, 200, 100]/100;
 spacing = 0.02;
-MicPos = zeros(MicNum, 3);
-for i = 1:MicNum
-    MicPos(i, :) = [MicStart(1, 1)+(i-1)*spacing MicStart(1, 2) MicStart(1, 3)];
+for i = MicNum_TDOA+1:MicNum
+    MicPos(i, :) = [MicStart(1, 1)+(i-(MicNum_TDOA+1))*spacing, MicStart(1, 2), MicStart(1, 3)];
 end
 
-SorPos = [2, 2.6, 1];                                    % source position (m)
-room_dim = [5, 6, 2.5];                                  % Room dimensions [x y z] (m)
+SorPos = [270, 250, 180]/100;                            % source position (m)
+room_dim = [500, 600, 250]/100;                          % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-reverberation_time = 0.8;                                % Reverberation time (s)
-points_rir = 16384;                                       % Number of rir points (需比 reverberation time 還長)
+reverberation_time = 0.2;                                % Reverberation time (s)
+points_rir = 2048;                                       % Number of rir points (需比 reverberation time 還長)
 look_mic = 10;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mtype = 'omnidirectional';                               % Type of microphone
@@ -33,6 +38,25 @@ order = -1;                                              % -1 equals maximum ref
 dim = 3;                                                 % Room dimension
 orientation = 0;                                         % Microphone orientation (rad)
 hp_filter = 1;                                           % Disable high-pass filter
+
+referencce_point = MicPos(1, :);
+sorpos_groundtruth = SorPos - referencce_point;
+
+% 畫空間圖 %
+figure(1);
+plot3( [0 room_dim(1, 1) room_dim(1, 1) 0 0 0 room_dim(1, 1) room_dim(1, 1) 0 0 room_dim(1, 1) room_dim(1, 1) 0 0 room_dim(1, 1) room_dim(1, 1)], ...
+       [0 0 room_dim(1, 2) room_dim(1, 2) 0 0 0 room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) 0 0 0], ...
+       [0 0 0 0 0 room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) 0 0 room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) 0] , 'k')
+hold on
+plot3(MicPos(:, 1), MicPos(:, 2), MicPos(:, 3), 'r.', 'MarkerSize', 15)
+hold on
+plot3(SorPos(:, 1), SorPos(:, 2), SorPos(:, 3), '*', 'MarkerSize', 20)
+hold off
+xlabel('x\_axis')
+ylabel('y\_axis')
+zlabel('z\_axis')
+title('空間圖')
+shg
 
 %% load ground-truth RIR (h) %%
 % 產生 RIR 和存.mat 檔 %
@@ -81,6 +105,57 @@ y_delay_transpose = y_delay.';
 [Y_delay, ~, ~] = stft(y_delay_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
 NumOfFrame = size(Y_delay, 2);
 
+%% TDOA localization %%
+% GCC-PHAT for delay estimation %
+delay = zeros(MicNum_TDOA-1, 1);
+difference = zeros(MicNum_TDOA-1, 1);
+for i = 1:MicNum_TDOA-1
+    delay(i, :) = gccphat(y_nodelay(i+1,:).', y_nodelay(1,:).', fs);
+    difference(i, :) = delay(i, :)*c;
+end
+
+% mics position with repect to reference point %
+micpos = [mic_x, mic_y, mic_z,] - referencce_point;
+
+% generate parameters matrix %
+A = 2*[micpos(2:end, :), difference];
+b = micpos(2:end, 1).^2 + micpos(2:end, 2).^2 + micpos(2:end, 3).^2 - difference.^2;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sigma = 0.01;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+psi = 4*sigma^2*(ones(MicNum_TDOA-1, 1)*ones(MicNum_TDOA-1, 1).' + eye(MicNum_TDOA-1))*difference*difference.';
+dia_load_psi = 1;
+invpsi = inv(psi+dia_load_psi*eye(MicNum_TDOA-1)); 
+P = [1 0 0 0;0 1 0 0;0 0 1 0;0 0 0 -1];
+
+% find possible root %
+syms Z
+theta = pinv(A.'*invpsi*A+Z*P )*(A.'*invpsi*b);
+I = theta.'*P*theta;
+[num, den] = numden(I);
+poly = sym2poly(num);
+roots = roots(poly);
+roots_real = roots(imag(roots)==0, :);    % 取只有實數的根
+if isempty(roots_real)
+    roots_real = [roots_real; 0];
+end
+
+% find actual root from posible root %
+if size(roots_real, 1) > 1
+    theta = zeros(4, size(roots_real, 1));
+    costfun = zeros(size(roots_real, 1), 1);
+    for i = 1:size(roots_real, 1)
+        theta(:, i) = pinv(A.'*invpsi*A+roots_real(i, :)*P )*(A.'*invpsi*b);
+        costfun(i, :) = (A*theta(:, i)-b).'*invpsi*(A*theta(:, i)-b);
+    end
+
+    [~, min_index] = min(costfun);
+    sorpos_estimation = theta(1:3, min_index).';
+else
+    theta = pinv(A.'*invpsi*A+roots_real*P )*(A.'*invpsi*b);
+    sorpos_estimation = theta(1:3, :).';
+end
+
 %% load y_wpe (y_wpe) %%
 % do wpe %
 y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
@@ -100,7 +175,7 @@ load(y_wpe_filename);
 % 算 mic 與 source 之距離 %
 distance = zeros(MicNum, SorNum);
 for i = 1 : MicNum
-    distance(i, :) =  sqrt(sum((SorPos - MicPos(i, :)).^2));
+    distance(i, :) =  sqrt(sum((SorPos - MicPos(i, :)).^2));    % 其實應該用sorpos_estimation+referencce_point 不過差不到一公分
 end
 
 % 算 a %
