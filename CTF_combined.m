@@ -26,7 +26,7 @@ for i = MicNum_TDOA+1:MicNum
     MicPos(i, :) = [MicStart(1, 1)+(i-(MicNum_TDOA+1))*spacing, MicStart(1, 2), MicStart(1, 3)];
 end
 
-SorPos = [270, 250, 180]/100;                            % source position (m)
+SorPos = [210, 215, 110]/100;                            % source position (m)
 room_dim = [500, 600, 250]/100;                          % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 reverberation_time = 0.2;                                % Reverberation time (s)
@@ -41,22 +41,6 @@ hp_filter = 1;                                           % Disable high-pass fil
 
 referencce_point = MicPos(1, :);
 sorpos_groundtruth = SorPos - referencce_point;
-
-% 畫空間圖 %
-figure(1);
-plot3( [0 room_dim(1, 1) room_dim(1, 1) 0 0 0 room_dim(1, 1) room_dim(1, 1) 0 0 room_dim(1, 1) room_dim(1, 1) 0 0 room_dim(1, 1) room_dim(1, 1)], ...
-       [0 0 room_dim(1, 2) room_dim(1, 2) 0 0 0 room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) 0 0 0], ...
-       [0 0 0 0 0 room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) 0 0 room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) 0] , 'k')
-hold on
-plot3(MicPos(:, 1), MicPos(:, 2), MicPos(:, 3), 'r.', 'MarkerSize', 15)
-hold on
-plot3(SorPos(:, 1), SorPos(:, 2), SorPos(:, 3), '*', 'MarkerSize', 20)
-hold off
-xlabel('x\_axis')
-ylabel('y\_axis')
-zlabel('z\_axis')
-title('空間圖')
-shg
 
 %% load ground-truth RIR (h) %%
 % 產生 RIR 和存.mat 檔 %
@@ -470,7 +454,7 @@ fig_filename = join(fig_filename_str, '');
 savefig(fig_filename)
 
 % MINT %
-g_len = floor(points_rir/1000)/4*3000;
+g_len = floor(points_rir/1000)/4*3000;obj_func_Kalmant
 weight_len = floor(g_len/4);
 dia_load_MINT = 10^(-7);
 source_MINT_Kalman = MINT(A_tdomain, y_nodelay, g_len, weight_len, dia_load_MINT);
@@ -482,6 +466,10 @@ source_MINT_Wiener_max  = max(abs(source_MINT_Wiener(1, point_start_save:end)));
 source_MINT_RLS_max  = max(abs(source_MINT_RLS(1, point_start_save:end)));
 source_MINT_Kalman_max  = max(abs(source_MINT_Kalman(1, point_start_save:end)));
 
+source_DAS_transpose = istft(Y_DAS, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, ConjugateSymmetric=true, FrequencyRange='onesided');
+source_DAS = source_DAS_transpose.';
+source_DAS_max  = max(abs(source_DAS(1, point_start_save:end)));
+
 audiowrite('wav\source.wav', source(1, point_start_save:end), fs)
 
 ratio_y_nodelay = 0.8 / max(abs(y_nodelay(look_mic, point_start_save:end))) ;
@@ -489,10 +477,9 @@ y_filemane_str = ['wav\y_nodelay_partial_', string(reverberation_time), '.wav'];
 y_filemane = join(y_filemane_str, '');
 audiowrite(y_filemane, y_nodelay(look_mic, point_start_save:end)*ratio_y_nodelay, fs)
 
-ratio_y_wpe = 0.8 / max(abs(y_wpe(look_mic, point_start_save:end))) ;
-y_filemane_str = ['wav\y_wpe_partial_', string(reverberation_time), '.wav'];
-y_filemane = join(y_filemane_str, '');
-audiowrite(y_filemane, y_wpe(look_mic, point_start_save:end)*ratio_y_wpe, fs)
+source_DAS_filemane_str = ['wav\source_DAS_partial_', string(reverberation_time), '.wav'];
+source_DAS_filemane = join(source_DAS_filemane_str, '');
+audiowrite(source_DAS_filemane, source_DAS(1, point_start_save:end).*(source_max/source_DAS_max), fs)
 
 source_MINT_filemane_str = ['wav\source_predict_partial_Wiener_MINT_', string(reverberation_time), '.wav'];
 source_MINT_filemane = join(source_MINT_filemane_str, '');

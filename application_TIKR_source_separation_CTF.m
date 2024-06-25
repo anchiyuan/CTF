@@ -6,24 +6,30 @@ addpath('wpe_v1.33')
 
 %% RIR parameter %%
 SorNum = 2;                                              % source number
-MicNum = 30;                                             % number of microphone
+MicNum_TDOA = 8;                                         % TDOA麥克風數量
+MicNum = 38;                                             % number of microphone
 c = 343;                                                 % Sound velocity (m/s)
 fs = 16000;                                              % Sample frequency (samples/s)
-Ts = 1/fs;                                               % Sample period (s)
 
-% ULA %
-MicStart = [1, 1.5, 1];
+% distributed 8 mic %
+mic_x = [ 200 ; 300 ; 300 ; 200 ; 200 ; 300 ; 300 ; 200 ]./100;
+mic_y = [ 200 ; 200 ; 300 ; 300 ; 200 ; 200 ; 300 ; 300 ]./100;
+mic_z = [ 100 ; 100 ; 100 ; 100 ; 200 ; 200 ; 200 ; 200 ]./100;
+MicPos = [mic_x, mic_y, mic_z,];
+
+% ULA 30 mics %
+MicStart = [210, 200, 100]/100;
 spacing = 0.02;
-MicPos = zeros(MicNum, 3);
-for i = 1:MicNum
-    MicPos(i, :) = [MicStart(1, 1)+(i-1)*spacing MicStart(1, 2) MicStart(1, 3)];
+for i = MicNum_TDOA+1:MicNum
+    MicPos(i, :) = [MicStart(1, 1)+(i-(MicNum_TDOA+1))*spacing, MicStart(1, 2), MicStart(1, 3)];
 end
 
-SorPos = [3.5, 2.6, 1 ; 0.5, 4, 1];                      % source position (m)
-room_dim = [5, 6, 2.5];                                  % Room dimensions [x y z] (m)
+SorPos = [210, 215, 110; 290, 290, 190]/100;                            % source position (m)
+room_dim = [500, 600, 250]/100;                          % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-reverberation_time = 0.4;                                % Reverberation time (s)
-points_rir = 8192;                                       % Number of rir points (需比 reverberation time 還長)
+reverberation_time = 0.2;                                % Reverberation time (s)
+points_rir = 2048;                                       % Number of rir points (需比 reverberation time 還長)
+look_mic = 10;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mtype = 'omnidirectional';                               % Type of microphone
 order = -1;                                              % -1 equals maximum reflection order!
@@ -48,20 +54,19 @@ title('空間圖')
 shg
 
 %% generate ground-truth RIR (h) %%
-% % 產生 RIR 和存.mat 檔 %
-% h = zeros(MicNum, SorNum, points_rir);
-% h(:, 1, :) = rir_generator(c, fs, MicPos, SorPos(1, :), room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
-% h(:, 2, :) = rir_generator(c, fs, MicPos, SorPos(2, :), room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
-% rir_filename_str = ['h_TIKR\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(SorNum), 'x', string(points_rir), '.mat'];
-% rir_filemane = join(rir_filename_str, '');
-% save(rir_filemane, 'h')
+% 產生 RIR 和存.mat 檔 %
+h = zeros(MicNum, SorNum, points_rir);
+h(:, 1, :) = rir_generator(c, fs, MicPos, SorPos(1, :), room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
+h(:, 2, :) = rir_generator(c, fs, MicPos, SorPos(2, :), room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
+rir_filename_str = ['h_TIKR\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(SorNum), 'x', string(points_rir), '.mat'];
+rir_filemane = join(rir_filename_str, '');
+save(rir_filemane, 'h')
 
 % load RIR 的 .mat 檔 %
 rir_filename_str = ['h_TIKR\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(SorNum), 'x', string(points_rir), '.mat'];
 rir_filemane = join(rir_filename_str, '');
 load(rir_filemane)
 
-look_mic = 10;
 % 畫 ground-truth RIR time plot %
 figure(2)
 subplot(2, 1, 1);
@@ -138,21 +143,21 @@ y_noisy = hs_noisy(:, 1:SorLen);
 
 
 %% WPE %%
-% % do wpe %
-% y_source_wpe = wpe(y_source_nodelay.', 'wpe_parameter.m');
-% y_source_wpe = y_source_wpe.';
-% 
-% y_interferer_wpe = wpe(y_interferer_nodelay.', 'wpe_parameter.m');
-% y_interferer_wpe = y_interferer_wpe.';
-% 
-% % 存 wpe mat %
-% y_wpe_filename_str = ['y_TIKR\y_source_wpe-', string(reverberation_time), '.mat'];
-% y_wpe_filename = join(y_wpe_filename_str, '');
-% save(y_wpe_filename, 'y_source_wpe')
-% 
-% y_wpe_filename_str = ['y_TIKR\y_interferer_wpe-', string(reverberation_time), '.mat'];
-% y_wpe_filename = join(y_wpe_filename_str, '');
-% save(y_wpe_filename, 'y_interferer_wpe')
+% do wpe %
+y_source_wpe = wpe(y_source_nodelay.', 'wpe_parameter.m');
+y_source_wpe = y_source_wpe.';
+
+y_interferer_wpe = wpe(y_interferer_nodelay.', 'wpe_parameter.m');
+y_interferer_wpe = y_interferer_wpe.';
+
+% 存 wpe mat %
+y_wpe_filename_str = ['y_TIKR\y_source_wpe-', string(reverberation_time), '.mat'];
+y_wpe_filename = join(y_wpe_filename_str, '');
+save(y_wpe_filename, 'y_source_wpe')
+
+y_wpe_filename_str = ['y_TIKR\y_interferer_wpe-', string(reverberation_time), '.mat'];
+y_wpe_filename = join(y_wpe_filename_str, '');
+save(y_wpe_filename, 'y_interferer_wpe')
 
 % load y_wpe %
 y_wpe_filename_str = ['y_TIKR\y_source_wpe-', string(reverberation_time), '.mat'];

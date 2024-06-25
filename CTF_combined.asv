@@ -42,22 +42,6 @@ hp_filter = 1;                                           % Disable high-pass fil
 referencce_point = MicPos(1, :);
 sorpos_groundtruth = SorPos - referencce_point;
 
-% 畫空間圖 %
-figure(1);
-plot3( [0 room_dim(1, 1) room_dim(1, 1) 0 0 0 room_dim(1, 1) room_dim(1, 1) 0 0 room_dim(1, 1) room_dim(1, 1) 0 0 room_dim(1, 1) room_dim(1, 1)], ...
-       [0 0 room_dim(1, 2) room_dim(1, 2) 0 0 0 room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) 0 0 0], ...
-       [0 0 0 0 0 room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) 0 0 room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) 0] , 'k')
-hold on
-plot3(MicPos(:, 1), MicPos(:, 2), MicPos(:, 3), 'r.', 'MarkerSize', 15)
-hold on
-plot3(SorPos(:, 1), SorPos(:, 2), SorPos(:, 3), '*', 'MarkerSize', 20)
-hold off
-xlabel('x\_axis')
-ylabel('y\_axis')
-zlabel('z\_axis')
-title('空間圖')
-shg
-
 %% load ground-truth RIR (h) %%
 % 產生 RIR 和存.mat 檔 %
 h = rir_generator(c, fs, MicPos, SorPos, room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
@@ -470,7 +454,7 @@ fig_filename = join(fig_filename_str, '');
 savefig(fig_filename)
 
 % MINT %
-g_len = floor(points_rir/1000)/4*3000;
+g_len = floor(points_rir/1000)/4*3000;obj_func_Kalman
 weight_len = floor(g_len/4);
 dia_load_MINT = 10^(-7);
 source_MINT_Kalman = MINT(A_tdomain, y_nodelay, g_len, weight_len, dia_load_MINT);
@@ -481,6 +465,8 @@ source_max  = max(abs(source(1, point_start_save:end)));
 source_MINT_Wiener_max  = max(abs(source_MINT_Wiener(1, point_start_save:end)));
 source_MINT_RLS_max  = max(abs(source_MINT_RLS(1, point_start_save:end)));
 source_MINT_Kalman_max  = max(abs(source_MINT_Kalman(1, point_start_save:end)));
+
+source_DAS_transpose = istft(Y_DAS, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
 
 audiowrite('wav\source.wav', source(1, point_start_save:end), fs)
 
