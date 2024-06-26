@@ -10,7 +10,6 @@ fs = 16000;           % 欲 resample 成的取樣頻率
 MicNum = 13;           % 總麥克風數量
 points_rir = 2048;    % 自行設定想要輸出的 RIR 長度
 date = '0607';
-look_mic = 7;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% read source 音檔 (source) %%
@@ -209,29 +208,19 @@ end
 [~, argmax_tf] = max(abs(tf.'));
 [~, argmax_h_hat] = max(abs(h_hat.'));
 
-%% ATF magnitude and phase plot %%
+%% 檢查 ATF 有無 match %%
 ATF = fft(tf, points_rir, 2);
 ATF_estimated = fft(h_hat, points_rir, 2);
 
 figure(5)
-subplot(2, 1, 1);
-semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF(look_mic, 1:points_rir/2+1))), 'r');
+semilogx(linspace(0, fs/2, points_rir/2+1), abs(ATF(look_mic, 1:points_rir/2+1)), 'r');
 hold on
-semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF_estimated(look_mic, 1:points_rir/2+1))), 'b');
+semilogx(linspace(0, fs/2, points_rir/2+1), abs(ATF_estimated(look_mic, 1:points_rir/2+1)), 'b');
 hold off
-xlim([200 8000])
-legend('ground-truth ATF', 'estimated ATF')
-xlabel('frequency (Hz)')
-ylabel('dB')
-
-subplot(2, 1, 2);
-semilogx(linspace(0, fs/2, points_rir/2+1), unwrap(angle(ATF(look_mic, 1:points_rir/2+1))), 'r');
-hold on
-semilogx(linspace(0, fs/2, points_rir/2+1), unwrap(angle(ATF_estimated(look_mic, 1:points_rir/2+1))), 'b');
-hold off
-xlim([200 8000])
-legend('ground-truth ATF', 'estimated ATF')
-xlabel('frequency (Hz)')
-ylabel('phase (radius)')
+legend('tfestimate', 'BSI')
+title('ATF')
+xlabel('frequency')
+ylabel('magnitude')
+shg
 
 fprintf('done\n')

@@ -442,14 +442,14 @@ h_NRMSPM = reshape(h.', [MicNum*points_rir 1]);
 aa_NRMSPM = reshape(A_tdomain.', [MicNum*points_rir 1]);
 NRMSPM_Kalman = 20*log10(norm(h_NRMSPM-h_NRMSPM.'*aa_NRMSPM/(aa_NRMSPM.'*aa_NRMSPM)*aa_NRMSPM)/norm(h_NRMSPM));
 
-% plot and save estimated RIR and ATF fig %
-algorithm = 'Kalman';
+% estimated RIR and absolute error plot %
 h_yaxis_upperlimit = max(h(look_mic, :)) + 0.01;
 h_yaxis_underlimit = min(h(look_mic, :)) - 0.01;
 ATF = fft(h, points_rir, 2);
 ATF_estimated = fft(A_tdomain, points_rir, 2);
 
-figure(1)
+figure(3)
+subplot(2, 1, 1);
 plot(h(look_mic, :), 'r');
 hold on
 plot(A_tdomain(look_mic, :), 'b');
@@ -460,39 +460,22 @@ legend('ground-truth RIR', 'estimated RIR')
 xlabel('time samples')
 ylabel('RIR')
 
-fig_filename_str = ['fig\fig_', string(reverberation_time), 'x', algorithm, '_1.fig'];
-fig_filename = join(fig_filename_str, '');
-savefig(fig_filename)
-
-figure(2)
-subplot(2, 1, 1);
-semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF(look_mic, 1:points_rir/2+1))), 'r');
-hold on
-semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF_estimated(look_mic, 1:points_rir/2+1))), 'b');
-hold off
-xlim([200 8000])
-legend('ground-truth ATF', 'estimated ATF')
-xlabel('frequency (Hz)')
-ylabel('dB')
-
 subplot(2, 1, 2);
-semilogx(linspace(0, fs/2, points_rir/2+1), unwrap(angle(ATF(look_mic, 1:points_rir/2+1))), 'r');
-hold on
-semilogx(linspace(0, fs/2, points_rir/2+1), unwrap(angle(ATF_estimated(look_mic, 1:points_rir/2+1))), 'b');
-hold off
-xlim([200 8000])
-legend('ground-truth ATF', 'estimated ATF')
+plot(linspace(0, fs/2, points_rir/2+1), abs(ATF(look_mic, 1:points_rir/2+1) - ATF_estimated(look_mic, 1:points_rir/2+1)));
+ylim([0 1])
 xlabel('frequency (Hz)')
-ylabel('phase (radius)')
+ylabel('absolute error')
+shg
 
-fig_filename_str = ['fig\fig_', string(reverberation_time), 'x', algorithm, '_2.fig'];
-fig_filename = join(fig_filename_str, '');
-savefig(fig_filename)
-
-% save A_tdomain %
+% save A_tdomain and fig %
+algorithm = 'Kalman';
 A_filename_str = ['A_tdomain\A_tdomain_', string(reverberation_time), 'x', algorithm, '.mat'];
 A_filename = join(A_filename_str, '');
 save(A_filename, 'A_tdomain')
+
+fig_filename_str = ['fig\fig_', string(reverberation_time), 'x', algorithm, '.fig'];
+fig_filename = join(fig_filename_str, '');
+savefig(fig_filename)
 
 % MINT %
 g_len = floor(points_rir/1000)/4*3000;
