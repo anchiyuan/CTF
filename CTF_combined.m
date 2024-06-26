@@ -29,9 +29,9 @@ end
 SorPos = [210, 215, 110]/100;                            % source position (m)
 room_dim = [500, 600, 250]/100;                          % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-reverberation_time = 0.2;                                % Reverberation time (s)
-points_rir = 2048;                                       % Number of rir points (需比 reverberation time 還長)
-look_mic = 10;
+reverberation_time = 0.3;                                % Reverberation time (s)
+points_rir = 6144;                                       % Number of rir points (需比 reverberation time 還長)
+look_mic = 38;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mtype = 'omnidirectional';                               % Type of microphone
 order = -1;                                              % -1 equals maximum reflection order!
@@ -146,25 +146,15 @@ y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
 y_wpe = y_wpe.';
 
 % 存 wpe mat %
-y_wpe_1 = y_wpe(1:MicNum_TDOA, :);
-y_wpe_2 = y_wpe(MicNum_TDOA+1:end, :);
-y_wpe_filename_str_1 = ['y\y_wpe_', string(reverberation_time), '_1.mat'];
-y_wpe_filename_str_2 = ['y\y_wpe_', string(reverberation_time), '_2.mat'];
-y_wpe_filename_1 = join(y_wpe_filename_str_1, '');
-y_wpe_filename_2 = join(y_wpe_filename_str_2, '');
-save(y_wpe_filename_1, 'y_wpe_1')
-save(y_wpe_filename_2, 'y_wpe_2')
+y_wpe_filename_str = ['y\y_wpe_', string(reverberation_time), '.mat'];
+y_wpe_filename = join(y_wpe_filename_str, '');
+save(y_wpe_filename, 'y_wpe')
 
 % load y_wpe %
-y_wpe_1 = y_wpe(1:MicNum_TDOA, :);
-y_wpe_2 = y_wpe(MicNum_TDOA+1:end, :);
-y_wpe_filename_str_1 = ['y\y_wpe_', string(reverberation_time), '_1.mat'];
-y_wpe_filename_str_2 = ['y\y_wpe_', string(reverberation_time), '_2.mat'];
-y_wpe_filename_1 = join(y_wpe_filename_str_1, '');
-y_wpe_filename_2 = join(y_wpe_filename_str_2, '');
-load(y_wpe_filename_1)
-load(y_wpe_filename_2)
-y_wpe = [y_wpe_1; y_wpe_2];
+y_wpe_filename_str = ['y\y_wpe_', string(reverberation_time), '.mat'];
+y_wpe_filename = join(y_wpe_filename_str, '');
+load(y_wpe_filename);
+
 
 %% DAS beamformer (Y_DAS) %%
 % 算 mic 與 source 之距離 %
@@ -274,11 +264,11 @@ xlabel('frequency (Hz)')
 ylabel('absolute error')
 shg
 
-% save A and fig %
+% save A_tdomain and fig %
 algorithm = 'Wiener';
-A_filename_str = ['A\A_', string(reverberation_time), 'x', algorithm, '.mat'];
+A_filename_str = ['A_tdomain\A_tdomain_', string(reverberation_time), 'x', algorithm, '.mat'];
 A_filename = join(A_filename_str, '');
-save(A_filename, 'A')
+save(A_filename, 'A_tdomain')
 
 fig_filename_str = ['fig\fig_', string(reverberation_time), 'x', algorithm, '.fig'];
 fig_filename = join(fig_filename_str, '');
@@ -358,11 +348,11 @@ xlabel('frequency (Hz)')
 ylabel('absolute error')
 shg
 
-% save A %
+% save A_tdomain and fig %
 algorithm = 'RLS';
-A_filename_str = ['A\A_', string(reverberation_time), 'x', algorithm, '.mat'];
+A_filename_str = ['A_tdomain\A_tdomain_', string(reverberation_time), 'x', algorithm, '.mat'];
 A_filename = join(A_filename_str, '');
-save(A_filename, 'A')
+save(A_filename, 'A_tdomain')
 
 fig_filename_str = ['fig\fig_', string(reverberation_time), 'x', algorithm, '.fig'];
 fig_filename = join(fig_filename_str, '');
@@ -443,18 +433,18 @@ xlabel('frequency (Hz)')
 ylabel('absolute error')
 shg
 
-% save A %
+% save A_tdomain and fig %
 algorithm = 'Kalman';
-A_filename_str = ['A\A_', string(reverberation_time), 'x', algorithm, '.mat'];
+A_filename_str = ['A_tdomain\A_tdomain_', string(reverberation_time), 'x', algorithm, '.mat'];
 A_filename = join(A_filename_str, '');
-save(A_filename, 'A')
+save(A_filename, 'A_tdomain')
 
 fig_filename_str = ['fig\fig_', string(reverberation_time), 'x', algorithm, '.fig'];
 fig_filename = join(fig_filename_str, '');
 savefig(fig_filename)
 
 % MINT %
-g_len = floor(points_rir/1000)/4*3000;obj_func_Kalmant
+g_len = floor(points_rir/1000)/4*3000;
 weight_len = floor(g_len/4);
 dia_load_MINT = 10^(-7);
 source_MINT_Kalman = MINT(A_tdomain, y_nodelay, g_len, weight_len, dia_load_MINT);

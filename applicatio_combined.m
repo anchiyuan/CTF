@@ -26,12 +26,12 @@ for i = MicNum_TDOA+1:MicNum
     MicPos(i, :) = [MicStart(1, 1)+(i-(MicNum_TDOA+1))*spacing, MicStart(1, 2), MicStart(1, 3)];
 end
 
-SorPos = [210, 215, 110; 290, 290, 190]/100;                            % source position (m)
+SorPos = [210, 215, 110; 280, 270, 170]/100;                            % source position (m)
 room_dim = [500, 600, 250]/100;                          % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-reverberation_time = 0.2;                                % Reverberation time (s)
-points_rir = 2048;                                       % Number of rir points (需比 reverberation time 還長)
-look_mic = 10;
+reverberation_time = 0.6;                                % Reverberation time (s)
+points_rir = 12288;                                       % Number of rir points (需比 reverberation time 還長)
+look_mic = 38;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mtype = 'omnidirectional';                               % Type of microphone
 order = -1;                                              % -1 equals maximum reflection order!
@@ -395,9 +395,12 @@ source_interferer_filemane_str = ['wav_TIKR\interferer_TIKR_', string(reverberat
 source_interferer_filemane = join(source_interferer_filemane_str, '');
 audiowrite(source_interferer_filemane, source_TIKR(2, point_start_save:end), fs)
 
+
+source_max  = max(abs(source(1, point_start_save:end)));
+source_MPDR_max  = max(abs(source_MPDR(1, point_start_save:end)));
 source_MPDR_filemane_str = ['wav_TIKR\source_MPDR_', string(MPDR_mode), '_', string(reverberation_time), '.wav'];
 source_MPDR_filemane = join(source_MPDR_filemane_str, '');
-audiowrite(source_MPDR_filemane, source_MPDR(1, point_start_save:end)*20, fs)
+audiowrite(source_MPDR_filemane, source_MPDR(1, point_start_save:end)/source_MPDR_max*source_max, fs)
 
 fprintf('done\n')
 
