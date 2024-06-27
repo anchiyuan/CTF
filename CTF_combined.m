@@ -29,8 +29,8 @@ end
 SorPos = [210, 215, 110]/100;                            % source position (m)
 room_dim = [500, 600, 250]/100;                          % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-reverberation_time = 0.3;                                % Reverberation time (s)
-points_rir = 6144;                                       % Number of rir points (需比 reverberation time 還長)
+reverberation_time = 0.6;                                % Reverberation time (s)
+points_rir = 12288;                                       % Number of rir points (需比 reverberation time 還長)
 look_mic = 38;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mtype = 'omnidirectional';                               % Type of microphone
@@ -347,7 +347,7 @@ h_yaxis_underlimit = min(h(look_mic, :)) - 0.01;
 ATF = fft(h, points_rir, 2);
 ATF_estimated = fft(A_tdomain, points_rir, 2);
 
-figure(1)
+figure(3)
 plot(h(look_mic, :), 'r');
 hold on
 plot(A_tdomain(look_mic, :), 'b');
@@ -362,7 +362,7 @@ fig_filename_str = ['fig\CTF_combined_', string(reverberation_time), 'x', algori
 fig_filename = join(fig_filename_str, '');
 savefig(fig_filename)
 
-figure(2)
+figure(4)
 subplot(2, 1, 1);
 semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF(look_mic, 1:points_rir/2+1))), 'r');
 hold on
@@ -449,7 +449,7 @@ h_yaxis_underlimit = min(h(look_mic, :)) - 0.01;
 ATF = fft(h, points_rir, 2);
 ATF_estimated = fft(A_tdomain, points_rir, 2);
 
-figure(1)
+figure(5)
 plot(h(look_mic, :), 'r');
 hold on
 plot(A_tdomain(look_mic, :), 'b');
@@ -464,7 +464,7 @@ fig_filename_str = ['fig\CTF_combined_', string(reverberation_time), 'x', algori
 fig_filename = join(fig_filename_str, '');
 savefig(fig_filename)
 
-figure(2)
+figure(6)
 subplot(2, 1, 1);
 semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF(look_mic, 1:points_rir/2+1))), 'r');
 hold on
