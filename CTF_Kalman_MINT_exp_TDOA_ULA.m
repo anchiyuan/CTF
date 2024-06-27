@@ -350,6 +350,10 @@ end
 
 A_tdomain = A_tdomain.*ratio_A_tdomain;
 
+A_filename_str = ['A_tdomain_exp\TDOA_ULA_',  date, '_A_tdomain.mat'];
+A_filename = join(A_filename_str, '');
+save(A_filename, 'A_tdomain')
+
 look_mic = 7;
 % 畫 A_tdomain time plot
 figure(2)
@@ -362,6 +366,10 @@ title('RIR')
 xlabel('points')
 ylabel('amplitude')
 shg
+
+fig_filename_str = ['fig_exp\TDOA_ULA_', date, '_RIR.fig'];
+fig_filename = join(fig_filename_str, '');
+savefig(fig_filename)
 
 %% 算 NRMSPM %%
 tf_NRMSPM = reshape(tf_space.', [MicNum*points_rir 1]);
@@ -467,5 +475,9 @@ xlim([200 8000])
 legend('ground-truth ATF', 'estimated ATF')
 xlabel('frequency (Hz)')
 ylabel('phase (radius)')
+
+fig_filename_str = ['fig_exp\TDOA_ULA_', date, '_ATF.fig'];
+fig_filename = join(fig_filename_str, '');
+savefig(fig_filename)
 
 fprintf('done\n')

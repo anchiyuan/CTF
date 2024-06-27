@@ -7,10 +7,10 @@ c = 343;
 Fs = 48000;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fs = 16000;           % 欲 resample 成的取樣頻率
-MicNum = 13;           % 總麥克風數量
+MicNum = 3;           % 跑不了太多通道因為記憶體不夠
 points_rir = 2048;    % 自行設定想要輸出的 RIR 長度
 date = '0607';
-look_mic = 7;
+look_mic = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% read source 音檔 (source) %%
@@ -47,7 +47,7 @@ speaker = resample(speaker, 1, Fs/fs);
 x = zeros(MicNum, SorLen);
 for i = 1:MicNum
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    x_str = ['wav_exp\', date,'\', string(i), '.wav'];
+    x_str = ['wav_exp\', date,'\', string(i+6), '.wav'];
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     x_filename = join(x_str, '');
     [x(i, :), ~] = audioread( x_filename, [1, SorLen]);
@@ -98,7 +98,7 @@ h_hat = h_hat/norm(h_hat);
 cost_fun = zeros(SorLen, 1);
 
 % iteration process %
-for n = L+1:SorLen
+for n = 7858:SorLen
     % construct R %
     R_temp = zeros(MicNum*L, MicNum*L);
     dia_sum = zeros(L, L);
@@ -176,11 +176,17 @@ end
 
 h_hat = h_hat.*ratio_h_hat;
 
+A_filename = 'A_tdomain_exp\BSI_NA_TD_h_hat.m';
+save(A_filename, 'h_hat')
+
 % cost function 圖 %
 figure(3)
 plot(cost_fun(L+1:n, :).');
 xlabel('update times')
 title('cost function')
+
+fig_filename = 'fig_exp\BSI_NA_TD_costfun.fig';
+savefig(fig_filename)
 
 % RIR 比較圖 %
 figure(4)
@@ -194,6 +200,9 @@ title('RIR')
 xlabel('time samples')
 ylabel('amplitude')
 shg
+
+fig_filename = 'fig_exp\BSI_NA_TD_RIR.fig';
+savefig(fig_filename)
 
 %% NRMSPM %%
 tf_NRMSPM = reshape(tf.', [MicNum*points_rir 1]);
@@ -233,5 +242,8 @@ xlim([200 8000])
 legend('ground-truth ATF', 'estimated ATF')
 xlabel('frequency (Hz)')
 ylabel('phase (radius)')
+
+fig_filename = 'fig_exp\BSI_NA_TD_ATF.fig';
+savefig(fig_filename)
 
 fprintf('done\n')

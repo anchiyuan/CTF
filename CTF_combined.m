@@ -257,7 +257,7 @@ legend('ground-truth RIR', 'estimated RIR')
 xlabel('time samples')
 ylabel('RIR')
 
-fig_filename_str = ['fig\fig_', string(reverberation_time), 'x', algorithm, '_1.fig'];
+fig_filename_str = ['fig\CTF_combined_', string(reverberation_time), 'x', algorithm, '_RIR.fig'];
 fig_filename = join(fig_filename_str, '');
 savefig(fig_filename)
 
@@ -282,12 +282,12 @@ legend('ground-truth ATF', 'estimated ATF')
 xlabel('frequency (Hz)')
 ylabel('phase (radius)')
 
-fig_filename_str = ['fig\fig_', string(reverberation_time), 'x', algorithm, '_2.fig'];
+fig_filename_str = ['fig\CTF_combined_', string(reverberation_time), 'x', algorithm, '_ATF.fig'];
 fig_filename = join(fig_filename_str, '');
 savefig(fig_filename)
 
 % save A_tdomain %
-A_filename_str = ['A_tdomain\A_tdomain_', string(reverberation_time), 'x', algorithm, '.mat'];
+A_filename_str = ['A_tdomain\CTF_combined_', string(reverberation_time), 'x', algorithm, '_A_tdomain.mat'];
 A_filename = join(A_filename_str, '');
 save(A_filename, 'A_tdomain')
 
@@ -358,7 +358,7 @@ legend('ground-truth RIR', 'estimated RIR')
 xlabel('time samples')
 ylabel('RIR')
 
-fig_filename_str = ['fig\fig_', string(reverberation_time), 'x', algorithm, '_1.fig'];
+fig_filename_str = ['fig\CTF_combined_', string(reverberation_time), 'x', algorithm, '_RIR.fig'];
 fig_filename = join(fig_filename_str, '');
 savefig(fig_filename)
 
@@ -383,12 +383,12 @@ legend('ground-truth ATF', 'estimated ATF')
 xlabel('frequency (Hz)')
 ylabel('phase (radius)')
 
-fig_filename_str = ['fig\fig_', string(reverberation_time), 'x', algorithm, '_2.fig'];
+fig_filename_str = ['fig\CTF_combined_', string(reverberation_time), 'x', algorithm, '_ATF.fig'];
 fig_filename = join(fig_filename_str, '');
 savefig(fig_filename)
 
 % save A_tdomain %
-A_filename_str = ['A_tdomain\A_tdomain_', string(reverberation_time), 'x', algorithm, '.mat'];
+A_filename_str = ['A_tdomain\CTF_combined_', string(reverberation_time), 'x', algorithm, '_A_tdomain.mat'];
 A_filename = join(A_filename_str, '');
 save(A_filename, 'A_tdomain')
 
@@ -460,7 +460,7 @@ legend('ground-truth RIR', 'estimated RIR')
 xlabel('time samples')
 ylabel('RIR')
 
-fig_filename_str = ['fig\fig_', string(reverberation_time), 'x', algorithm, '_1.fig'];
+fig_filename_str = ['fig\CTF_combined_', string(reverberation_time), 'x', algorithm, '_RIR.fig'];
 fig_filename = join(fig_filename_str, '');
 savefig(fig_filename)
 
@@ -485,12 +485,12 @@ legend('ground-truth ATF', 'estimated ATF')
 xlabel('frequency (Hz)')
 ylabel('phase (radius)')
 
-fig_filename_str = ['fig\fig_', string(reverberation_time), 'x', algorithm, '_2.fig'];
+fig_filename_str = ['fig\CTF_combined_', string(reverberation_time), 'x', algorithm, '_ATF.fig'];
 fig_filename = join(fig_filename_str, '');
 savefig(fig_filename)
 
 % save A_tdomain %
-A_filename_str = ['A_tdomain\A_tdomain_', string(reverberation_time), 'x', algorithm, '.mat'];
+A_filename_str = ['A_tdomain\CTF_combined_', string(reverberation_time), 'x', algorithm, '_A_tdomain.mat'];
 A_filename = join(A_filename_str, '');
 save(A_filename, 'A_tdomain')
 
