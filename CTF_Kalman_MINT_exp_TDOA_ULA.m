@@ -327,7 +327,7 @@ for i = 1:MicNum
     t60(i, :) = t60_point/fs;
 end
 
-look_mic = 7;
+look_mic = 13;
 figure(1)
 plot(tf_space(look_mic, :));
 title('ground-truth RIR')
@@ -354,7 +354,7 @@ A_filename_str = ['A_tdomain_exp\TDOA_ULA_',  date, '_A_tdomain.mat'];
 A_filename = join(A_filename_str, '');
 save(A_filename, 'A_tdomain')
 
-look_mic = 7;
+look_mic = 13;
 % 畫 A_tdomain time plot
 figure(2)
 plot(tf_space(look_mic, :), 'r');
@@ -391,6 +391,7 @@ ATF_space= fft(tf_space, points_rir, 2);
 ATF_system = fft(tf_system, points_rir, 2);
 ATF_estimated = fft(A_tdomain, points_rir, 2);
 
+look_mic = 7;
 figure(3)
 semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF_space(look_mic, 1:points_rir/2+1))), 'r');
 hold on
