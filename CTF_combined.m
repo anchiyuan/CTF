@@ -29,8 +29,8 @@ end
 SorPos = [210, 215, 110]/100;                            % source position (m)
 room_dim = [500, 600, 250]/100;                          % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-reverberation_time = 0.6;                                % Reverberation time (s)
-points_rir = 12288;                                       % Number of rir points (需比 reverberation time 還長)
+reverberation_time = 1.6;                                % Reverberation time (s)
+points_rir = 32768;                                       % Number of rir points (需比 reverberation time 還長)
 look_mic = 38;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mtype = 'omnidirectional';                               % Type of microphone
