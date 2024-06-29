@@ -10,7 +10,7 @@ fs = 16000;           % 欲 resample 成的取樣頻率
 MicNum = 3;           % 跑不了太多通道因為記憶體不夠
 points_rir = 2048;    % 自行設定想要輸出的 RIR 長度
 date = '0607';
-look_mic = 1;
+look_mic = 3;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% read source 音檔 (source) %%
@@ -98,7 +98,7 @@ h_hat = h_hat/norm(h_hat);
 cost_fun = zeros(SorLen, 1);
 
 % iteration process %
-for n = 7858:SorLen
+for n = L+1:SorLen
     % construct R %
     R_temp = zeros(MicNum*L, MicNum*L);
     dia_sum = zeros(L, L);
@@ -222,6 +222,7 @@ end
 ATF = fft(tf, points_rir, 2);
 ATF_estimated = fft(h_hat, points_rir, 2);
 
+look_mic = 1;
 figure(5)
 subplot(2, 1, 1);
 semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF(look_mic, 1:points_rir/2+1))), 'r');

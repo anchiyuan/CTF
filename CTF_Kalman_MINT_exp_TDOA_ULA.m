@@ -327,7 +327,7 @@ for i = 1:MicNum
     t60(i, :) = t60_point/fs;
 end
 
-look_mic = 13;
+look_mic = 9;
 figure(1)
 plot(tf_space(look_mic, :));
 title('ground-truth RIR')
@@ -354,7 +354,7 @@ A_filename_str = ['A_tdomain_exp\TDOA_ULA_',  date, '_A_tdomain.mat'];
 A_filename = join(A_filename_str, '');
 save(A_filename, 'A_tdomain')
 
-look_mic = 13;
+look_mic = 9;
 % 畫 A_tdomain time plot
 figure(2)
 plot(tf_space(look_mic, :), 'r');
