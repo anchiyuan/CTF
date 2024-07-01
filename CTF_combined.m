@@ -29,8 +29,8 @@ end
 SorPos = [210, 215, 110]/100;                            % source position (m)
 room_dim = [500, 600, 250]/100;                          % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-reverberation_time = 1;                                % Reverberation time (s)
-points_rir = 20480;                                       % Number of rir points (需比 reverberation time 還長)
+reverberation_time = 0.88;                                % Reverberation time (s)
+points_rir = 18432;                                       % Number of rir points (需比 reverberation time 還長)
 look_mic = 38;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mtype = 'omnidirectional';                               % Type of microphone
@@ -41,6 +41,21 @@ hp_filter = 1;                                           % Disable high-pass fil
 
 referencce_point = MicPos(1, :);
 sorpos_groundtruth = SorPos - referencce_point;
+
+figure(1);
+plot3( [0 room_dim(1, 1) room_dim(1, 1) 0 0 0 room_dim(1, 1) room_dim(1, 1) 0 0 room_dim(1, 1) room_dim(1, 1) 0 0 room_dim(1, 1) room_dim(1, 1)], ...
+       [0 0 room_dim(1, 2) room_dim(1, 2) 0 0 0 room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) 0 0 0], ...
+       [0 0 0 0 0 room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) 0 0 room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) 0] , 'k')
+hold on
+plot3(MicPos(:, 1), MicPos(:, 2), MicPos(:, 3), 'r.', 'MarkerSize', 15)
+hold on
+plot3(SorPos(:, 1), SorPos(:, 2), SorPos(:, 3), '*', 'MarkerSize', 20)
+hold off
+xlabel('x\_axis')
+ylabel('y\_axis')
+zlabel('z\_axis')
+title('空間圖')
+shg
 
 %% load ground-truth RIR (h) %%
 % 產生 RIR 和存.mat 檔 %
