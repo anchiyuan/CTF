@@ -170,7 +170,6 @@ y_wpe_filename_str = ['y\y_wpe_', string(reverberation_time), '.mat'];
 y_wpe_filename = join(y_wpe_filename_str, '');
 load(y_wpe_filename);
 
-
 %% DAS beamformer (Y_DAS) %%
 % 算 mic 與 source 之距離 %
 distance = zeros(MicNum, SorNum);

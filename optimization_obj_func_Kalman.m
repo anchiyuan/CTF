@@ -1,4 +1,5 @@
 function error = optimization_obj_func_Kalman(L, x, start_ini_frame, ini_frame, Y_DAS, n, Y_delay, look_mic)
+
 weight = zeros(L, 1);
 K = zeros(L, 1);    % Kalman gain %
 P = x(1)*eye(L);    % error covariance matrix %

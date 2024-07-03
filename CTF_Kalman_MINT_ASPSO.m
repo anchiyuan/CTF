@@ -4,26 +4,34 @@ close all;
 % 加入資料夾 %
 addpath('wpe_v1.33')
 
+tic
+
 %% RIR parameter %%
 SorNum = 1;                                              % source number
-MicNum = 30;                                             % number of microphone
+MicNum_TDOA = 8;                                         % TDOA麥克風數量
+MicNum = 38;                                             % number of microphone
 c = 343;                                                 % Sound velocity (m/s)
 fs = 16000;                                              % Sample frequency (samples/s)
-Ts = 1/fs;                                               % Sample period (s)
 
-% ULA %
-MicStart = [1, 1.5, 1];
+% distributed 8 mic %
+mic_x = [ 200 ; 300 ; 300 ; 200 ; 200 ; 300 ; 300 ; 200 ]./100;
+mic_y = [ 200 ; 200 ; 300 ; 300 ; 200 ; 200 ; 300 ; 300 ]./100;
+mic_z = [ 100 ; 100 ; 100 ; 100 ; 200 ; 200 ; 200 ; 200 ]./100;
+MicPos = [mic_x, mic_y, mic_z,];
+
+% ULA 30 mics %
+MicStart = [210, 200, 100]/100;
 spacing = 0.02;
-MicPos = zeros(MicNum, 3);
-for i = 1:MicNum
-    MicPos(i, :) = [MicStart(1, 1)+(i-1)*spacing MicStart(1, 2) MicStart(1, 3)];
+for i = MicNum_TDOA+1:MicNum
+    MicPos(i, :) = [MicStart(1, 1)+(i-(MicNum_TDOA+1))*spacing, MicStart(1, 2), MicStart(1, 3)];
 end
 
-SorPos = [2, 2.6, 1];                                    % source position (m)
-room_dim = [5, 6, 2.5];                                  % Room dimensions [x y z] (m)
+SorPos = [210, 215, 110]/100;                            % source position (m)
+room_dim = [500, 600, 250]/100;                          % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-reverberation_time = 0.4;                                % Reverberation time (s)
-points_rir = 8192;                                       % Number of rir points (需比 reverberation time 還長)
+reverberation_time = 0.2;                                % Reverberation time (s)
+points_rir = 4096;                                       % Number of rir points (需比 reverberation time 還長)
+look_mic = 38;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mtype = 'omnidirectional';                               % Type of microphone
 order = -1;                                              % -1 equals maximum reflection order!
@@ -31,61 +39,50 @@ dim = 3;                                                 % Room dimension
 orientation = 0;                                         % Microphone orientation (rad)
 hp_filter = 1;                                           % Disable high-pass filter
 
-%% generate ground-truth RIR (h) %%
-% 產生 RIR 和存.mat 檔 %
+figure(1);
+plot3( [0 room_dim(1, 1) room_dim(1, 1) 0 0 0 room_dim(1, 1) room_dim(1, 1) 0 0 room_dim(1, 1) room_dim(1, 1) 0 0 room_dim(1, 1) room_dim(1, 1)], ...
+       [0 0 room_dim(1, 2) room_dim(1, 2) 0 0 0 room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) room_dim(1, 2) 0 0 0], ...
+       [0 0 0 0 0 room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) 0 0 room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) room_dim(1, 3) 0] , 'k')
+hold on
+plot3(MicPos(:, 1), MicPos(:, 2), MicPos(:, 3), 'r.', 'MarkerSize', 15)
+hold on
+plot3(SorPos(:, 1), SorPos(:, 2), SorPos(:, 3), '*', 'MarkerSize', 20)
+hold off
+xlabel('x\_axis')
+ylabel('y\_axis')
+zlabel('z\_axis')
+title('空間圖')
+shg
+
+%% load ground-truth RIR (h) %%
+% % 產生 RIR 和存.mat 檔 %
 % h = rir_generator(c, fs, MicPos, SorPos, room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
-% rir_filename_str = ['h_', string(reverberation_time), 'x', string(MicNum), 'x', string(points_rir), '.mat'];
+% rir_filename_str = ['h\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(points_rir), '.mat'];
 % rir_filemane = join(rir_filename_str, '');
 % save(rir_filemane, 'h')
 
-% load RIR 的 .mat 檔 %
 rir_filename_str = ['h\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(points_rir), '.mat'];
 rir_filemane = join(rir_filename_str, '');
 load(rir_filemane)
-
-look_mic = 10;
-h_yaxis_upperlimit = max(h(look_mic, :)) + 0.01;
-h_yaxis_underlimit = min(h(look_mic, :)) - 0.01;
-% 畫 ground-truth RIR time plot %
-figure(1)
-plot(h(look_mic, :), 'r');
-ylim([h_yaxis_underlimit h_yaxis_upperlimit])
-title('ground-truth RIR')
-xlabel('points')
-ylabel('amplitude')
-shg
 
 %% window parameter %%
 NFFT = 1024;
 hopsize = 256;
 
-% windows %
 win = hamming(NFFT);
 osfac = round(NFFT/hopsize);
 
 frequency = NFFT/2 + 1;
 L = length(hopsize:hopsize:points_rir+2*NFFT-2);    % (len(win) + len(win) - 1) + points_rir - 1
-L_vector = 1:1:L;
 freqs_vector = linspace(0, fs/2, frequency);
 
-%% 讀音檔 or 產生 white noise source (source) %%
+%% 讀音檔 (source) %%
 Second = 23;
 SorLen =  Second*fs;
 
 % load speech source %
-[source_transpose, fs] = audioread('245.wav', [1, SorLen]);    % speech source
+[source_transpose, fs] = audioread('245.wav', [1, SorLen]);
 source = source_transpose.';
-
-% load white noise source %
-% source = wgn(1, SorLen, 0);                                    % white noise source
-
-%% compute source signal for frequency (S) %%
-% source 轉頻域 %
-source_transpose = source.';
-[S, ~, S_t_vector] = stft(source_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
-
-NumOfFrame = size(S_t_vector, 1);
-NumOfFrame_vector = 1:1:NumOfFrame;
 
 %% 產生麥克風訊號，先在時域上 convolution 再做 stft (y_nodelay y_delay Y_delay ) %%
 % convolution source and RIR %
@@ -102,14 +99,15 @@ y_nodelay = as(:, 1:SorLen);
 % y_delay 轉頻域 %
 y_delay_transpose = y_delay.';
 [Y_delay, ~, ~] = stft(y_delay_transpose, fs, Window=win, OverlapLength=NFFT-hopsize, FFTLength=NFFT, FrequencyRange='onesided');
+NumOfFrame = size(Y_delay, 2);
 
-%% WPE (y_wpe) %%
+%% load y_wpe (y_wpe) %%
 % % do wpe %
 % y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
 % y_wpe = y_wpe.';
 % 
 % % 存 wpe mat %
-% y_wpe_filename_str = ['y_wpe_', string(reverberation_time), '.mat'];
+% y_wpe_filename_str = ['y\y_wpe_', string(reverberation_time), '.mat'];
 % y_wpe_filename = join(y_wpe_filename_str, '');
 % save(y_wpe_filename, 'y_wpe')
 
@@ -307,6 +305,7 @@ parfor n =1:frequency    % 每個頻率獨立
 
     A(look_mic, :, n) = weight';
 end     % end for parfor frequency
+
 toc
 
 %% A 轉回時域且算 NRMSPM (A_tdomain NRMSPM) %%
@@ -324,65 +323,61 @@ end
 
 A_tdomain = A_tdomain.*ratio_A_tdomain;
 
-% 畫 A_tdomain time plot
-figure(2)
-plot(h(look_mic, :), 'r');
-hold on
-plot(A_tdomain(look_mic, :), 'b');
-hold off
-title('estimated RIR')
-legend('ground-truth RIR', 'estimated RIR')
-xlabel('points')
-ylabel('amplitude')
-shg
-
 %  算 NRMSPM %
 h_NRMSPM = reshape(h.', [MicNum*points_rir 1]);
 aa_NRMSPM = reshape(A_tdomain.', [MicNum*points_rir 1]);
 NRMSPM = 20*log10(norm(h_NRMSPM-h_NRMSPM.'*aa_NRMSPM/(aa_NRMSPM.'*aa_NRMSPM)*aa_NRMSPM)/norm(h_NRMSPM));
 
-%%  dereverb with MINT (source_MINT) %%
-g_len = floor(points_rir/1000)/4*3000;
-weight_len = floor(g_len/4);
-dia_load_MINT = 10^(-7);
-source_MINT = MINT(A_tdomain, y_nodelay, g_len, weight_len, dia_load_MINT);
+% plot and save estimated RIR and ATF fig %
+algorithm = 'ASPSO';
+h_yaxis_upperlimit = max(h(look_mic, :)) + 0.01;
+h_yaxis_underlimit = min(h(look_mic, :)) - 0.01;
+ATF = fft(h, points_rir, 2);
+ATF_estimated = fft(A_tdomain, points_rir, 2);
 
-% adjust source_predict 的最高點使之與 source 的一樣 %
-source_max  = max(abs(source(1, :)));
-source_MINT_max  = max(abs(source_MINT(1, :)));
-ratio_source_MINT = source_max/source_MINT_max;
-source_MINT = source_MINT.*ratio_source_MINT;
-
-% 畫 source_predict time plot %
-figure(3)
-plot(source(1, :), 'r');
+figure(2)
+plot(h(look_mic, :), 'r');
 hold on
-plot(source_MINT(1, :), 'b');
+plot(A_tdomain(look_mic, :), 'b');
 hold off
-title('source\_MINT')
-xlabel('points')
-ylabel('magnitude')
-legend('source', 'source\_MINT')
-shg
+ylim([h_yaxis_underlimit h_yaxis_upperlimit])
+xlim([1 points_rir])
+legend('ground-truth RIR', 'estimated RIR')
+xlabel('time samples')
+ylabel('RIR')
 
-%% save .wav 檔 %%
-% save partial wav %
-point_start_save = 18*fs;
+fig_filename_str = ['fig\', algorithm, '_', string(reverberation_time), '_RIR.fig'];
+fig_filename = join(fig_filename_str, '');
+savefig(fig_filename)
 
-audiowrite('wav\source_partial.wav', source(1, point_start_save:end), fs)
+figure(3)
+subplot(2, 1, 1);
+semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF(look_mic, 1:points_rir/2+1))), 'r');
+hold on
+semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF_estimated(look_mic, 1:points_rir/2+1))), 'b');
+hold off
+xlim([200 8000])
+legend('ground-truth ATF', 'estimated ATF')
+xlabel('frequency (Hz)')
+ylabel('dB')
 
-ratio_y_nodelay = 0.8 / max(abs(y_nodelay(look_mic, point_start_save:end))) ;
-y_filemane_str = ['wav\y_nodelay_partial-', string(reverberation_time), '.wav'];
-y_filemane = join(y_filemane_str, '');
-audiowrite(y_filemane, y_nodelay(look_mic, point_start_save:end)*ratio_y_nodelay, fs)
+subplot(2, 1, 2);
+semilogx(linspace(0, fs/2, points_rir/2+1), unwrap(angle(ATF(look_mic, 1:points_rir/2+1))), 'r');
+hold on
+semilogx(linspace(0, fs/2, points_rir/2+1), unwrap(angle(ATF_estimated(look_mic, 1:points_rir/2+1))), 'b');
+hold off
+xlim([200 8000])
+legend('ground-truth ATF', 'estimated ATF')
+xlabel('frequency (Hz)')
+ylabel('phase (radius)')
 
-ratio_y_wpe = 0.8 / max(abs(y_wpe(look_mic, point_start_save:end))) ;
-y_filemane_str = ['wav\y_wpe_partial-', string(reverberation_time), '.wav'];
-y_filemane = join(y_filemane_str, '');
-audiowrite(y_filemane, y_wpe(look_mic, point_start_save:end)*ratio_y_wpe, fs)
+fig_filename_str = ['fig\', algorithm, '_', string(reverberation_time), '_ATF.fig'];
+fig_filename = join(fig_filename_str, '');
+savefig(fig_filename)
 
-source_MINT_filemane_str = ['wav\source_predict_partial_Kalman_MINT_ASPSO-', string(reverberation_time), '.wav'];
-source_MINT_filemane = join(source_MINT_filemane_str, '');
-audiowrite(source_MINT_filemane, source_MINT(1, point_start_save:end), fs)
+% save A_tdomain %
+A_filename_str = ['A_tdomain\', algorithm, '_', string(reverberation_time), '_A_tdomain.mat'];
+A_filename = join(A_filename_str, '');
+save(A_filename, 'A_tdomain')
 
 fprintf('done\n')
