@@ -328,6 +328,11 @@ h_NRMSPM = reshape(h.', [MicNum*points_rir 1]);
 aa_NRMSPM = reshape(A_tdomain.', [MicNum*points_rir 1]);
 NRMSPM = 20*log10(norm(h_NRMSPM-h_NRMSPM.'*aa_NRMSPM/(aa_NRMSPM.'*aa_NRMSPM)*aa_NRMSPM)/norm(h_NRMSPM));
 
+NRMSPM_in = zeros(MicNum, 1);
+for i = 1:MicNum
+    NRMSPM_in(i, :) = 20*log10(norm(h(i, :).'-h(i, :)*A_tdomain(i, :).'/(A_tdomain(i, :)*A_tdomain(i, :).')*A_tdomain(i, :).')/norm(h(i, :).'));
+end
+
 % plot and save estimated RIR and ATF fig %
 algorithm = 'ASPSO';
 h_yaxis_upperlimit = max(h(look_mic, :)) + 0.01;

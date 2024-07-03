@@ -29,8 +29,8 @@ end
 SorPos = [210, 215, 110]/100;                            % source position (m)
 room_dim = [500, 600, 250]/100;                          % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-reverberation_time = 0.88;                                % Reverberation time (s)
-points_rir = 18432;                                       % Number of rir points (需比 reverberation time 還長)
+reverberation_time = 0.2;                                % Reverberation time (s)
+points_rir = 4096;                                       % Number of rir points (需比 reverberation time 還長)
 look_mic = 38;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mtype = 'omnidirectional';                               % Type of microphone
@@ -58,11 +58,11 @@ title('空間圖')
 shg
 
 %% load ground-truth RIR (h) %%
-% 產生 RIR 和存.mat 檔 %
-h = rir_generator(c, fs, MicPos, SorPos, room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
-rir_filename_str = ['h\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(points_rir), '.mat'];
-rir_filemane = join(rir_filename_str, '');
-save(rir_filemane, 'h')
+% % 產生 RIR 和存.mat 檔 %
+% h = rir_generator(c, fs, MicPos, SorPos, room_dim, reverberation_time, points_rir, mtype, order, dim, orientation, hp_filter);
+% rir_filename_str = ['h\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(points_rir), '.mat'];
+% rir_filemane = join(rir_filename_str, '');
+% save(rir_filemane, 'h')
 
 rir_filename_str = ['h\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(points_rir), '.mat'];
 rir_filemane = join(rir_filename_str, '');
@@ -156,14 +156,14 @@ else
 end
 
 %% load y_wpe (y_wpe) %%
-% do wpe %
-y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
-y_wpe = y_wpe.';
-
-% 存 wpe mat %
-y_wpe_filename_str = ['y\y_wpe_', string(reverberation_time), '.mat'];
-y_wpe_filename = join(y_wpe_filename_str, '');
-save(y_wpe_filename, 'y_wpe')
+% % do wpe %
+% y_wpe = wpe(y_nodelay.', 'wpe_parameter.m');
+% y_wpe = y_wpe.';
+% 
+% % 存 wpe mat %
+% y_wpe_filename_str = ['y\y_wpe_', string(reverberation_time), '.mat'];
+% y_wpe_filename = join(y_wpe_filename_str, '');
+% save(y_wpe_filename, 'y_wpe')
 
 % load y_wpe %
 y_wpe_filename_str = ['y\y_wpe_', string(reverberation_time), '.mat'];
