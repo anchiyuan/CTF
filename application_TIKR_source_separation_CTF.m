@@ -27,8 +27,8 @@ end
 SorPos = [210, 215, 110; 290, 290, 190]/100;                            % source position (m)
 room_dim = [500, 600, 250]/100;                          % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-reverberation_time = 0.2;                                % Reverberation time (s)
-points_rir = 2048;                                       % Number of rir points (需比 reverberation time 還長)
+reverberation_time = 0.6;                                % Reverberation time (s)
+points_rir = 12288;                                       % Number of rir points (需比 reverberation time 還長)
 look_mic = 10;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mtype = 'omnidirectional';                               % Type of microphone
@@ -293,13 +293,39 @@ aa_NRMSPM = reshape(A_interferer_tdomain.', [MicNum*points_rir 1]);
 NRMSPM_interferer = 20*log10(norm(h_NRMSPM-h_NRMSPM.'*aa_NRMSPM/(aa_NRMSPM.'*aa_NRMSPM)*aa_NRMSPM)/norm(h_NRMSPM));
 
 %%  source seperation with TIKR (source_TIKR) %%
-% A_tdomain 轉頻域 %
-frequency_ATF = points_rir/2 + 1;
-ATF = zeros(MicNum, SorNum, frequency_ATF);
-ATF_temp = fft(A_source_tdomain, points_rir, 2);
-ATF(:, 1, :) = ATF_temp(:, 1:frequency_ATF);
-ATF_temp = fft(A_interferer_tdomain, points_rir, 2);
-ATF(:, 2, :) = ATF_temp(:, 1:frequency_ATF);
+TIKR_mode = 'freefield_ATF';    % 'ATF' 'RTF' 'freefield_ATF'
+if strcmp(TIKR_mode, 'ATF')
+    % generate estimated ATF %
+    frequency_ATF = points_rir/2 + 1;
+    ATF = zeros(MicNum, SorNum, frequency_ATF);
+    ATF_temp = fft(A_source_tdomain, points_rir, 2);
+    ATF(:, 1, :) = ATF_temp(:, 1:frequency_ATF);
+    ATF_temp = fft(A_interferer_tdomain, points_rir, 2);
+    ATF(:, 2, :) = ATF_temp(:, 1:frequency_ATF);
+
+elseif strcmp(TIKR_mode, 'RTF')
+    % generate estimated RTF %
+    frequency_ATF = points_rir/2 + 1;
+    ATF = zeros(MicNum, SorNum, frequency_ATF);
+    ATF_temp = fft(A_source_tdomain, points_rir, 2);
+    ATF(:, 1, :) = ATF_temp(:, 1:frequency_ATF);
+    ATF(:, 1, :) = ATF(:, 1, :)./ATF(1, 1, :);
+    ATF_temp = fft(A_interferer_tdomain, points_rir, 2);
+    ATF(:, 2, :) = ATF_temp(:, 1:frequency_ATF);
+    ATF(:, 2, :) = ATF(:, 2, :)./ATF(1, 2, :);
+
+elseif strcmp(TIKR_mode, 'freefield_ATF')
+    % generate freefield ATF %
+    frequency_ATF = points_rir/2 + 1;
+    ATF = zeros(MicNum, SorNum, frequency_ATF);
+    frequency_ATF_vector = linspace(0, fs/2, frequency_ATF);
+    for n = 1:frequency_ATF
+        omega = 2*pi*frequency_ATF_vector(n);
+        ATF(:, 1, n) = exp(-1j*omega/c*distance(:, 1))./distance(:, 1);
+        ATF(:, 2, n) = exp(-1j*omega/c*distance(:, 2))./distance(:, 2);
+    end
+
+end
 
 % noisy 麥克風訊號轉 stft %
 [Y_noisy, ~, ~] = stft(y_noisy.', fs, Window=hamming(points_rir), OverlapLength=points_rir-points_rir/4, FFTLength=points_rir, FrequencyRange='onesided');
@@ -328,11 +354,11 @@ y_filemane_str = ['wav_TIKR\y_noisy_', string(reverberation_time), '.wav'];
 y_filemane = join(y_filemane_str, '');
 audiowrite(y_filemane, y_noisy(look_mic, point_start_save:end)*ratio_y_noisy, fs)
 
-source_TIKR_filemane_str = ['wav_TIKR\source_TIKR_', string(reverberation_time), '.wav'];
+source_TIKR_filemane_str = ['wav_TIKR\source_TIKR_', string(TIKR_mode), '_', string(reverberation_time), '.wav'];
 source_TIKR_filemane = join(source_TIKR_filemane_str, '');
 audiowrite(source_TIKR_filemane, source_TIKR(1, point_start_save:end), fs)
 
-source_interferer_filemane_str = ['wav_TIKR\interferer_TIKR_', string(reverberation_time), '.wav'];
+source_interferer_filemane_str = ['wav_TIKR\interferer_TIKR_', string(TIKR_mode), '_', string(reverberation_time), '.wav'];
 source_interferer_filemane = join(source_interferer_filemane_str, '');
 audiowrite(source_interferer_filemane, source_TIKR(2, point_start_save:end), fs)
 

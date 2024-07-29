@@ -27,8 +27,8 @@ end
 SorPos = [210, 215, 110; 290, 290, 190]/100;                            % source position (m)
 room_dim = [500, 600, 250]/100;                          % Room dimensions [x y z] (m)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-reverberation_time = 0.2;                                % Reverberation time (s)
-points_rir = 2048;                                       % Number of rir points (需比 reverberation time 還長)
+reverberation_time = 0.6;                                % Reverberation time (s)
+points_rir = 12288;                                       % Number of rir points (需比 reverberation time 還長)
 look_mic = 10;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mtype = 'omnidirectional';                               % Type of microphone
@@ -293,7 +293,7 @@ aa_NRMSPM = reshape(A_interferer_tdomain.', [MicNum*points_rir 1]);
 NRMSPM_interferer = 20*log10(norm(h_NRMSPM-h_NRMSPM.'*aa_NRMSPM/(aa_NRMSPM.'*aa_NRMSPM)*aa_NRMSPM)/norm(h_NRMSPM));
 
 %%  speech enhancement with MPDR (source_MPDR) %%
-MPDR_mode = 'ATF';    % 'ATF' 'RTF' 'freefield_ATF'
+MPDR_mode = 'freefield_ATF';    % 'ATF' 'RTF' 'freefield_ATF'
 if strcmp(MPDR_mode, 'ATF')
     % generate estimated ATF %
     frequency_ATF = points_rir/2 + 1;
@@ -309,6 +309,7 @@ elseif strcmp(MPDR_mode, 'RTF')
 
 elseif strcmp(MPDR_mode, 'freefield_ATF')
     % generate freefield ATF %
+    frequency_ATF = points_rir/2 + 1;
     ATF = zeros(MicNum, frequency_ATF);
     frequency_ATF_vector = linspace(0, fs/2, frequency_ATF);
     for n = 1:frequency_ATF
@@ -359,11 +360,12 @@ point_start_save = 18*fs;
 audiowrite('wav_TIKR\source_ground-truth.wav', source(1, point_start_save:end), fs)
 audiowrite('wav_TIKR\interferer_ground-truth.wav', source(2, point_start_save:end), fs)
 
-ratio_y_noisy = 0.8 / max(abs(y_noisy(look_mic, point_start_save:end))) ;
+ratio_y_noisy = 0.8 / max(abs(y_noisy(look_mic, point_start_save:end)));
 y_filemane_str = ['wav_TIKR\y_noisy_', string(reverberation_time), '.wav'];
 y_filemane = join(y_filemane_str, '');
 audiowrite(y_filemane, y_noisy(look_mic, point_start_save:end)*ratio_y_noisy, fs)
 
+ratio_source_MPDR = 1 / max(abs(source_MPDR(:, point_start_save:end)));
 source_MPDR_filemane_str = ['wav_TIKR\source_MPDR_', string(MPDR_mode), '_', string(reverberation_time), '.wav'];
 source_MPDR_filemane = join(source_MPDR_filemane_str, '');
-audiowrite(source_MPDR_filemane, source_MPDR(1, point_start_save:end)*20, fs)
+audiowrite(source_MPDR_filemane, source_MPDR(1, point_start_save:end)*ratio_source_MPDR, fs)
