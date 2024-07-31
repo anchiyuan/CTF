@@ -2,7 +2,7 @@ clc; clear;
 close all;
 
 fs = 16000;
-look_mic = 9;
+look_mic = 7;
 
 for t60 = 2:16
     y_wpe_filename_str = ['y\y_wpe_', string(t60/10), '.mat'];

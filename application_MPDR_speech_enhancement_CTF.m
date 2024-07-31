@@ -335,7 +335,7 @@ end
 Ryy = Ryy/NumOfFrame_ATF;
 
 % compute MPDR weight %
-dia_load_beamformer = 10^(-2);
+dia_load_beamformer = 10^(2);    % critical for PESQ or SDR, its value depends on checking magnitude of Ryy
 w_MPDR = zeros(MicNum, frequency);
 for n = 1:frequency_ATF
     w_MPDR(:, n) = inv(Ryy(:, :, n)+dia_load_beamformer*eye(MicNum))*ATF(:, n)/(ATF(:, n)'*inv(Ryy(:, :, n)+dia_load_beamformer*eye(MicNum))*ATF(:, n));
