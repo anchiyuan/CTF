@@ -4,9 +4,9 @@ close all;
 fs = 16000;
 
 algorithm = ["Wiener", "RLS", "Kalman"];
-reverberation_time = 1.6;
+reverberation_time = 0.6;
 MicNum = 38;
-points_rir = 32768;
+points_rir = 12288;
 look_mic = 38;
 
 rir_filename_str = ['h\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(points_rir), '.mat'];
@@ -47,6 +47,7 @@ for i = 1:size(algorithm, 2)
     semilogx(linspace(0, fs/2, points_rir/2+1), 20*log10(abs(ATF_estimated(look_mic, 1:points_rir/2+1))), 'b-.');
     hold off
     xlim([200 8000])
+    xticks([200 1000 8000])
     title(al)
     legend('ground-truth ATF', 'estimated ATF')
     xlabel('frequency (Hz)')
@@ -58,6 +59,7 @@ for i = 1:size(algorithm, 2)
     semilogx(linspace(0, fs/2, points_rir/2+1), unwrap(angle(ATF_estimated(look_mic, 1:points_rir/2+1))), 'b-.');
     hold off
     xlim([200 8000])
+    xticks([200 1000 8000])
     title(al)
     legend('ground-truth ATF', 'estimated ATF')
     xlabel('frequency (Hz)')
