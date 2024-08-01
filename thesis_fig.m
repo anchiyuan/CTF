@@ -4,9 +4,9 @@ close all;
 fs = 16000;
 
 algorithm = ["Wiener", "RLS", "Kalman"];
-reverberation_time = 0.6;
+reverberation_time = 1.6;
 MicNum = 38;
-points_rir = 12288;
+points_rir = 32768;
 look_mic = 38;
 
 rir_filename_str = ['h\h_', string(reverberation_time), 'x', string(MicNum), 'x', string(points_rir), '.mat'];
